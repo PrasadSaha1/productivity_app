@@ -33,8 +33,12 @@
         <label for="break_period">Break period (minutes)</label>
         <input type="number" id="break_period" name="break_period" placeholder="Break period" min="1" required value="{{timer.break_period}}">
 
-        <label for="times_repeat">Times to Run</label>
+        <label for="times_repeat">Sessions before Long Break</label>
         <input type="number" id="times_repeat" name="times_repeat" placeholder="Times to Repeat" min="1" required value="{{timer.times_repeat}}">
+
+        <label for="times_repeat">Long Break (minutes)</label>
+        <input type="number" id="long_break" name="long_break" placeholder="Long Break" min="1" required value="{{timer.long_break}}">
+
 
         <label>
             {% if timer.sound_on_work_end %}

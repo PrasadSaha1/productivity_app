@@ -16,8 +16,8 @@
         flex-direction: column;
         align-items: center;
         margin: 20px;
-        max-width: 800px; /* Limit the width */
-        width: 100%; /* Make it responsive */
+        max-width: 800px;
+        width: 100%;
     }
 
     h1 {
@@ -28,51 +28,42 @@
 
     .button {
         padding: 10px 20px;
-        background-color: #007bff; /* Primary color */
-        color: white; /* Text color */
+        background-color: #007bff;
+        color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
         transition: background-color 0.3s;
-        margin: 5px; /* Margin between buttons */
+        margin: 5px;
     }
 
     .button:hover {
-        background-color: #0056b3; /* Darker shade on hover */
+        background-color: #0056b3;
     }
 
     .timer-card {
-        background: #f8f9fa; /* Light background for cards */
-        border: 1px solid #ced4da; /* Border for cards */
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
         border-radius: 5px;
         padding: 15px;
         margin: 10px 0;
-        width: 100%; /* Full width within the container */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        width: 100%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .timer-card h3 {
-        margin: 0 0 10px; /* Spacing below the timer title */
+        margin: 0 0 10px;
         text-align: center;
     }
 
     .timer-card p {
-        margin: 5px 0; /* Spacing between paragraphs */
+        margin: 5px 0;
     }
 
     .button-container {
         display: flex;
         justify-content: center;
-        gap: 10px; /* Space between buttons */
-    }
-
-    .countdown {
-        font-size: 48px; /* Increase the font size */
-        font-weight: bold; /* Make the text bold */
-        text-align: center; /* Center the text */
-        padding: 20px; /* Add some padding around the timer */
-        width: 150px; /* Set a fixed width */
-        margin: 10px auto; /* Center it horizontally */
+        gap: 10px;
     }
 </style>
 
@@ -81,38 +72,24 @@
         <h1>Pomodoro Timer</h1>
         <button class="button" onclick="window.location.href='{% url 'make_new_timer' %}'">Make New Timer</button>
 
-        {% if timer_ongoing %}
-            <div class="timer-card" id="active-timer-card">
-                <h3>{{ current_timer }}</h3>
-                <div class="countdown" id="countdown-display">00:00</div>
-
-                <div class="button-container">
-                    <button id="pause-button" class="button" onclick="togglePause()">Pause</button>
-                    <button onclick="startCountdown({{ current_timer.break_period }} * 60)">Start Break</button>
-                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="endPomodoro(); return confirmAction('Are you sure you want to end this Pomodoro Session?', this.submit);">
-                        {% csrf_token %}
-                        <button type="submit" class="button">End Pomodoro</button>
-                    </form>
-                </div>
-
-                <p>Work period: {{ current_timer.work_period }} minutes</p>
-                <p>Break period: {{ current_timer.break_period }} minutes</p>
-                <p>Times to Repeat (Including first time): {{ current_timer.times_repeat }}</p>
-                <p>{{ current_timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
-                <p>{{ current_timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
-                <p>Date Created: {{ current_timer.date_created|date:"m/d/Y" }}</p>
-            </div>
-        {% endif %}
-
         <h1>View Timers</h1>
 
         {% for timer in timers|dictsortreversed:"id" %}
-        {% if timer.id != current_timer.id %}
             <div class="timer-card">
                 <h3>{{ timer }}</h3>
-                <p>Work period: {{ timer.work_period }} minutes</p>
-                <p>Break period: {{ timer.break_period }} minutes</p>
-                <p>Times to Repeat (Including first time): {{ timer.times_repeat }}</p>
+
+                {% if timer.work_period == -1 %}
+                    <p>Work period: AUTO</p>
+                    <p>Break period: AUTO</p>
+                    <p>Sessions before Long Break: AUTO</p>
+                    <p>Long Break: AUTO</p>
+                {% else %}
+                    <p>Work period: {{ timer.work_period }} minutes</p>
+                    <p>Break period: {{ timer.break_period }} minutes</p>
+                    <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
+                    <p>Long Break: {{ timer.long_break }} minutes</p>
+                {% endif %}
+
                 <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
                 <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
                 <p>Date Created: {{ timer.date_created|date:"m/d/Y" }}</p>
@@ -122,11 +99,12 @@
                         {% csrf_token %}
                         <button type="submit" class="button">Start</button>
                     </form>
-
-                    <form action="{% url 'edit_timer' timer.id %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" class="button">Edit</button>
-                    </form>
+                    {% if timer.work_period != -1 %}
+                        <form action="{% url 'edit_timer' timer.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="button">Edit</button>
+                        </form>
+                    {% endif %}
 
                     <form action="{% url 'delete_timer' timer.id %}" method="post" onsubmit="return confirmAction('Are you sure you want to delete this timer?', this.submit);">
                         {% csrf_token %}
@@ -134,102 +112,19 @@
                     </form>
                 </div>
             </div>
-        {% endif %}
         {% endfor %}
     </div>
 </div>
 
 <script>
-let interval; // Variable to hold the interval ID
-const display = document.getElementById('countdown-display');
-const pauseButton = document.getElementById('pause-button');
-let isPaused = false;
-
-function startCountdown(duration) {
-    const endTime = Date.now() + duration * 1000;
-    localStorage.setItem('pomodoroEndTime', endTime);
-    localStorage.setItem('isPaused', false); // Set pause state to false
-
-    clearInterval(interval);
-    interval = setInterval(() => {
-        if (!isPaused) {
-            const remainingTime = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-            const minutes = Math.floor(remainingTime / 60);
-            const seconds = remainingTime % 60;
-
-            display.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-            if (remainingTime <= 0) {
-                clearInterval(interval);
-                display.textContent = "Time's up!";
-                localStorage.removeItem('pomodoroEndTime');
-                localStorage.removeItem('pomodoroRemainingTime'); // Clear remaining time
-                localStorage.removeItem('isPaused'); // Clear pause state
-            } else {
-                localStorage.setItem('pomodoroEndTime', endTime);
-            }
+    // Function to handle confirmation action
+    function confirmAction(message, action) {
+        if (confirm(message)) {
+            action(); // Execute the action if confirmed
+            return true; // Ensure form submission proceeds
         }
-    }, 1000);
-}
-
-function togglePause() {
-    if (isPaused) {
-        // Resume the countdown
-        const remainingTime = localStorage.getItem('pomodoroRemainingTime');
-        startCountdown(remainingTime);
-        pauseButton.textContent = 'Pause';
-    } else {
-        // Pause the countdown
-        clearInterval(interval);
-        const endTime = localStorage.getItem('pomodoroEndTime');
-        const remainingTime = Math.max(0, Math.floor((parseInt(endTime) - Date.now()) / 1000));
-        localStorage.setItem('pomodoroRemainingTime', remainingTime); // Store remaining time
-        localStorage.setItem('isPaused', true); // Set pause state to true
-        pauseButton.textContent = 'Resume';
+        return false; // Prevent form submission if not confirmed
     }
-    isPaused = !isPaused;
-}
-
-function endPomodoro() {
-    clearInterval(interval);
-    localStorage.removeItem('pomodoroEndTime'); // Clear end time
-    localStorage.removeItem('pomodoroRemainingTime'); // Clear remaining time
-    localStorage.removeItem('isPaused'); // Clear pause state
-}
-
-// Load timer state from localStorage
-document.addEventListener("DOMContentLoaded", function() {
-    const endTime = localStorage.getItem('pomodoroEndTime');
-    isPaused = localStorage.getItem('isPaused') === 'true'; // Get pause state
-
-    if (endTime) {
-        const remainingTime = Math.max(0, Math.floor((parseInt(endTime) - Date.now()) / 1000));
-        display.textContent = `${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? '0' : ''}${remainingTime % 60}`;
-
-        if (remainingTime > 0) {
-            if (!isPaused) {
-                startCountdown(remainingTime);
-            } else {
-                display.textContent = `Paused: ${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? '0' : ''}${remainingTime % 60}`;
-                localStorage.setItem('pomodoroRemainingTime', remainingTime); // Store remaining time when paused
-                pauseButton.textContent = 'Resume'; // Change button text to 'Resume'
-            }
-        } else {
-            display.textContent = "Time's up!";
-            localStorage.removeItem('pomodoroEndTime'); // Clear timer state if time's up
-        }
-    } else {
-        const workDuration = ({{ current_timer.work_period }} * 60);
-        startCountdown(workDuration);
-    }
-});
-
-function confirmAction(message, callback) {
-    if (confirm(message)) {
-        callback();
-        return true;
-    }
-    return false;
-}
 </script>
+
 {% endblock %}

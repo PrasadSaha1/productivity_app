@@ -27,42 +27,75 @@
         <label for="timer_name">Name of timer</label>
         <input type="text" id="timer_name" name="name" placeholder="Name of timer" required>
 
+        <label>
+            <input type="checkbox" id="auto_mode" name="auto_mode" onclick="toggleInputs()">
+            Enable auto mode?
+            <br>By enabling auto mode, the timers will not operate based on pre-determined values.
+            <br>Instead, you will choose when you are ready for a break.
+            <br>If a timer is in auto mode, it can't be edited at a later time.
+        </label>
+
         <label for="work_period">Work period (minutes)</label>
         <input type="number" id="work_period" name="work_period" placeholder="Work period" min="1" required>
 
         <label for="break_period">Break period (minutes)</label>
         <input type="number" id="break_period" name="break_period" placeholder="Break period" min="1" required>
 
-        <label for="times_repeat">Times to Run</label>
-        <input type="number" id="times_repeat" name="times_repeat" placeholder="Times to Repeat" min="1" required>
+        <label for="times_repeat">Sessions before Long Break</label>
+        <input type="number" id="times_repeat" name="times_repeat" placeholder="Times to Repeat" min="1" required value="{{timer.times_repeat}}">
+
+        <label for="times_repeat">Long Break (minutes)</label>
+        <input type="number" id="long_break" name="long_break" placeholder="Long Break" min="1" required value="{{timer.long_break}}">
 
         <label>
-            <input type="checkbox" name="sound_on_work_end">
+            <input type="checkbox" id="sound_on_work_end" name="sound_on_work_end">
             Sound upon the end of work period?
         </label>
 
         <label>
-            <input type="checkbox" name="sound_on_break_end">
+            <input type="checkbox" id="sound_on_break_end" name="sound_on_break_end">
             Sound upon the end of break period?
         </label>
-        <input type="hidden" id="date_created" name="date_created" placeholder="Times to Repeat" value="{{current_date}}">
 
-        <!-- Submit Button -->
+        <input type="hidden" id="date_created" name="date_created" value="{{current_date}}">
+
         <button type="submit">Submit</button>
     </form>
 </div>
 
 <script>
-    function validateInputs() {
-        const workPeriod = document.querySelector('input[name="work_period"]').value;
-        const breakPeriod = document.querySelector('input[name="break_period"]').value;
+    function toggleInputs() {
+        const autoModeCheckbox = document.getElementById('auto_mode');
+        const formElements = document.querySelectorAll('#work_period, #break_period, #times_repeat, #long_break, #sound_on_work_end, #sound_on_break_end');
 
-        if (workPeriod <= 0 || breakPeriod <= 0) {
-            alert("Please enter positive numbers only.");
-            return false; // Prevent form submission
-        }
-        return true; // Allow form submission if validation passes
+        formElements.forEach(element => {
+            element.disabled = autoModeCheckbox.checked;
+        });
     }
+
+    // Call toggleInputs on page load in case auto mode is pre-checked
+    window.onload = toggleInputs;
+
+function validateInputs() {
+    const autoModeCheckbox = document.getElementById('auto_mode');
+
+    if (autoModeCheckbox.checked) {
+        document.getElementById('auto_mode').checked = false;
+        toggleInputs();
+        // Set all numeric inputs to -1
+        document.getElementById('work_period').value = -1;
+        document.getElementById('break_period').value = -1;
+        document.getElementById('times_repeat').value = -1;
+        document.getElementById('long_break').value = -1;
+
+        // Set sound_on_work_end to false and sound_on_break_end to true
+        document.getElementById('sound_on_work_end').checked = false;
+        document.getElementById('sound_on_break_end').checked = true;
+    }
+
+    return true; // Allow form submission
+}
+
 </script>
 
 {% endblock %}

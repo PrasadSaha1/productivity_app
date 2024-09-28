@@ -13,9 +13,6 @@ from .models import PomodoroTimer  # Import your model
 
 # Create your views here.
 
-timer_ongoing = False
-current_timer = None
-
 @login_required(login_url='/register/')
 def home(response):
     return render(response, "main/home.html", {})
@@ -104,15 +101,12 @@ def make_new_timer(request):
 @login_required(login_url='/register/')
 def productivity(request):
     timers = PomodoroTimer.objects.filter(user=request.user)
-    return render(request, "main/productivity.html", {'timers': timers, "timer_ongoing": timer_ongoing, "current_timer": current_timer})
+    return render(request, "main/productivity.html", {'timers': timers})
 
 @login_required(login_url='/register/')
 def start_timer(request, id):
-    global timer_ongoing, current_timer
-    current_timer = PomodoroTimer.objects.get(id=id)
     timers = PomodoroTimer.objects.filter(user=request.user)
-    timer_ongoing = True
-    return render(request, "main/productivity.html", {'timers': timers, 'timer_ongoing': timer_ongoing, 'current_timer': current_timer})
+    return render(request, "main/productivity.html", {'timers': timers})
 
 
 @login_required(login_url='/register/')
@@ -139,16 +133,17 @@ def edit_timer(request, id):
 
     return render(request, "main/edit_timer.html", {'timer': oringial_timer, "date_created": date_created})
 
+
 @login_required(login_url='/register/')
 def delete_timer(request, id):
     timer = PomodoroTimer.objects.get(id=id)
     timer.delete()
 
     timers = PomodoroTimer.objects.filter(user=request.user)
-    return render(request, "main/productivity.html", {'timers': timers, "timer_ongoing": timer_ongoing, "current_timer": current_timer})
+    return render(request, "main/productivity.html", {'timers': timers})
 
 
-"""
+
 @csrf_exempt
 def end_pomodoro(request):
     global timer_ongoing, current_timer
@@ -156,28 +151,3 @@ def end_pomodoro(request):
         timer_ongoing = False
         current_timer = None
     return redirect('pomodoro')  # Use the URL name for redirection
-
-
-@csrf_exempt  # Make sure you have CSRF protection enabled in production
-def handle_timer_action(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        timer_id = data.get('id')
-        action = data.get('action')
-        timer = PomodoroTimer.objects.get(id=timer_id)
-
-        if action == 'start':
-            return JsonResponse({'success': True, 'message': f'Started timer with ID: {timer_id}'})
-        elif action == 'edit':
-            return JsonResponse({'success': True, 'message': f'Editing timer with ID: {timer_id}'})
-        elif action == 'delete':
-            timer.delete()
-            return JsonResponse({'success': True, 'message': f'Deleted timer with ID: {timer_id}'})
-
-    return JsonResponse({'success': False, 'message': 'Invalid request method'})
-
-@login_required(login_url='/register/')
-def edit_timer(request):
-    return render(request, "main/edit_timer.html", {})
-    """
-
