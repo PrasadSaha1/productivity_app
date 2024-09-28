@@ -14,5 +14,7 @@ urlpatterns = [
      path("start_timer/<int:id>/", views.start_timer, name="start_timer"),
      path("edit_timer/<int:id>/", views.edit_timer, name="edit_timer"),
      path("delete_timer/<int:id>/", views.delete_timer, name="delete_timer"),
+     path("logout_view", views.logout_view, name="logout_view"),
      path('end_pomodoro/', views.end_pomodoro, name='end_pomodoro'),
+     path('update-timer-state/', views.UpdateTimerStateView.as_view(), name='update_timer_state'),
 ]

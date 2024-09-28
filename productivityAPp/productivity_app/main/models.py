@@ -14,6 +14,7 @@ class PomodoroTimer(models.Model):
     date_created = models.DateField(default=timezone.now)
     long_break = models.IntegerField(default=-1)
     auto_mode = models.BooleanField(default=False)
+    current_state = models.CharField(default="inactive", max_length=200)
 
     def __str__(self):
         return self.name

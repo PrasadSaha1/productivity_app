@@ -1,1 +1,223 @@
+ {% extends 'main/base.html' %}
 
+{% block content %}
+    <style>
+        /* Center the content within the page */
+        .content-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .timer-display {
+            font-size: 48px; /* Larger font for timer display */
+            text-align: center;  /* Center the countdown text */
+            margin: 20px 0;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            font-weight: normal;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .timer-card {
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 800px;  /* Set a max-width to prevent it from expanding too much */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer-card h3 {
+            margin: 0 0 10px;
+            text-align: center;
+        }
+
+        .timer-card p {
+            margin: 5px 0;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px; /* Space between buttons */
+        }
+
+        .top-button {
+            position: relative; /* Ensure it is positioned relative to the button container */
+            z-index: 1; /* Bring this button above the others */
+        }
+
+        .other-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* Space between other buttons */
+            position: relative; /* Ensure this is positioned relative too */
+            z-index: 0; /* Default z-index */
+        }
+    </style>
+
+    <div class="content-wrapper">
+        <h1>Current Timer</h1>
+        <div class="timer-card">
+            <h3>{{ timer }}</h3>
+            <div class="timer-display" id="timerDisplay"></div>
+
+            <div class="button-container">
+                <div class="other-buttons">
+                    {% if timer.current_state == "timer_running" %}
+                        <button>Pause</button>
+                        <button>Restart Current Work Session</button>
+                        <button>Start Short Break</button>
+                        <button>Start Long Break</button>
+                        <button>End Pomodoro</button>
+                    {% elif timer.current_state == "short_break_running" %}
+                        <button>Pause</button>
+                        <button>End Break</button>
+                        <button>Restart Break</button>
+                        <button>Start Long Break</button>
+                        <button>End Pomodoro</button>
+                    {% elif timer.current_state == "long_break_running" %}
+                        <button>Pause</button>
+                        <button>End Long Break</button>
+                        <button>Restart Long Break</button>
+                        <button>End Pomodoro</button>
+                    {% elif timer.current_state == "end_of_work_session" %}
+                        <button>Start Normal Break</button>
+                        <button>Start Long Break</button>
+                        <button>Start Work Session</button>
+                        <button>End Pomodoro</button>
+                    {% elif timer.current_state == "end_of_break_session" %}
+                        <button>Start Work Session</button>
+                        <button>Start Normal Break</button>
+                        <button>Start Long Break</button>
+                        <button>End Pomodoro</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if timer.work_period == -1 %}
+                <p>Work period: AUTO</p>
+                <p>Break period: AUTO</p>
+                <p>Sessions before Long Break: AUTO</p>
+                <p>Long Break: AUTO</p>
+            {% else %}
+                <p>Work period: {{ timer.work_period }} minutes</p>
+                <p>Break period: {{ timer.break_period }} minutes</p>
+                <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
+                <p>Long Break: {{ timer.long_break }} minutes</p>
+            {% endif %}
+
+            <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
+            <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
+            <p>Date Created: {{ timer.date_created|date:"m/d/Y" }}</p>
+
+        </div>
+    </div>
+
+    <script>
+        let duration = {{ timer.work_period }} * 60; // Total duration in seconds
+        const timerDisplay = document.getElementById('timerDisplay');
+        let countdownInterval; // Variable to hold the interval ID
+        let remainingTime = getRemainingTime(); // Get remaining time from localStorage
+        let lastStartTime; // To store the last start time
+
+        // Function to save remaining time to localStorage
+        function saveRemainingTime(remainingTime) {
+            localStorage.setItem('remainingTime', remainingTime);
+            localStorage.setItem('lastStartTime', Date.now());
+        }
+
+        // Function to retrieve remaining time from localStorage
+        function getRemainingTime() {
+            return parseInt(localStorage.getItem('remainingTime')) || duration;
+        }
+
+        function startCountdown() {
+            lastStartTime = Date.now(); // Store the current time when countdown starts
+            countdownInterval = setInterval(function () {
+                let minutes = parseInt(remainingTime / 60, 10);
+                let seconds = parseInt(remainingTime % 60, 10);
+
+                // Pad single digit seconds with leading zeros
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                // Display the timer
+                timerDisplay.textContent = minutes + ":" + seconds;
+
+                // Save the remaining time to localStorage
+                saveRemainingTime(remainingTime);
+
+                // If timer is finished
+                if (--remainingTime < 0) {
+                    clearInterval(countdownInterval);
+                    timerDisplay.textContent = "Time's up!"; // Display message or perform action
+                    localStorage.removeItem('remainingTime'); // Clear the saved time
+                    localStorage.removeItem('lastStartTime'); // Clear the saved start time
+                }
+            }, 1000); // Update every second
+        }
+
+        // Pause countdown when the tab is not active
+        function pauseCountdown() {
+            clearInterval(countdownInterval);
+        }
+
+        // Resume countdown when the tab is active
+        function resumeCountdown() {
+            remainingTime = getRemainingTime(); // Get remaining time from localStorage
+            startCountdown();
+        }
+
+        // Start the countdown when the page loads
+        window.onload = function() {
+            remainingTime = getRemainingTime(); // Ensure the remaining time is up to date
+            startCountdown();
+        };
+
+        // Listen for visibility change to pause and resume the timer
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                pauseCountdown(); // Pause if the document is hidden
+                let elapsedTime = Math.floor((Date.now() - lastStartTime) / 1000); // Calculate elapsed time
+                remainingTime -= elapsedTime; // Deduct elapsed time from remaining time
+                saveRemainingTime(remainingTime); // Save updated remaining time
+            } else {
+                remainingTime = getRemainingTime(); // Update remaining time from localStorage
+                startCountdown(); // Resume the countdown
+            }
+        });
+    </script>
+
+{% endblock %}

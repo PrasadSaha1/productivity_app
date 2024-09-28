@@ -22,7 +22,7 @@
     <div class="button-container">
         <button onclick="window.location.href='{% url 'change_username' %}'">Change Username</button>
         <button onclick="window.location.href='{% url 'change_password' %}'">Change Password</button>
-        <form method="post" action="{% url 'logout' %}" onsubmit="return confirmLogout();">
+        <form method="post" action="{% url 'logout_view' %}" onsubmit="return confirmLogout();">
             {% csrf_token %}
             <button type="submit">Log out</button>
         </form>
