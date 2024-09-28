@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.http import require_POST
 import json
 
 from .forms import CreateNewTimer
@@ -19,6 +20,7 @@ from .models import PomodoroTimer  # Import your model
 def home(response):
     return render(response, "main/home.html", {})
 
+
 @login_required(login_url="/register/")
 def settings(response):
     return render(response, "main/settings.html", {})
@@ -26,11 +28,16 @@ def settings(response):
 
 @login_required(login_url="/register/")
 def logout_view(request):
+    # Set all user's timers to "inactive"
     for timer in PomodoroTimer.objects.filter(user=request.user):
         timer.current_state = "inactive"
         timer.save()
+
+    # Log out the user
     logout(request)
-    return redirect("register")
+
+    # Redirect to a custom page that will clear localStorage
+    return render(request, "main/clear_storage.html")
 
 
 @login_required(login_url="/register/")
@@ -120,8 +127,11 @@ def productivity(request):
 @login_required(login_url='/register/')
 def start_timer(request, id):
     timer = PomodoroTimer.objects.get(id=id)
-    timer.current_state = "timer_running"
-    timer.save()
+
+    if timer.current_state == "inactive":
+        timer.current_state = "timer_running"
+        timer.save()
+    print(timer.current_state)
     return render(request, "main/start_timer.html", {'timer': timer})
 
 
@@ -159,6 +169,25 @@ def delete_timer(request, id):
     return render(request, "main/productivity.html", {'timers': timers})
 
 
+@require_POST
+@login_required(login_url="/register/")
+def update_timer_state(request, id):
+    timer = get_object_or_404(PomodoroTimer, id=id, user=request.user)
+
+    # Extract the new state from the request body
+    data = json.loads(request.body)
+    new_state = data.get('state')
+
+    # Update the timer's state
+    if new_state:
+        timer.current_state = new_state
+        timer.save()
+        return JsonResponse({'status': 'success'})
+
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+
 @method_decorator(csrf_exempt, name='dispatch')  # Exempt CSRF for simplicity (not recommended for production)
 class UpdateTimerStateView(View):
     def post(self, request, *args, **kwargs):
@@ -176,10 +205,10 @@ class UpdateTimerStateView(View):
 
 @csrf_exempt
 def end_pomodoro(request):
-    global timer_ongoing, current_timer
-    if request.method == 'POST':
-        timer_ongoing = False
-        current_timer = None
-    return redirect('pomodoro')  # Use the URL name for redirection
+    for timer in PomodoroTimer.objects.filter(user=request.user):
+        timer.current_state = "inactive"
+        timer.save()
+    return render(request, "main/after_end_pomodoro.html")
+
 
 
