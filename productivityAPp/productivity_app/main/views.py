@@ -130,9 +130,11 @@ def start_timer(request, id):
 
     if timer.current_state == "inactive":
         timer.current_state = "timer_running"
+        timer.breaks_until_long_break = timer.times_repeat - 1
         timer.save()
     print(timer.current_state)
-    return render(request, "main/start_timer.html", {'timer': timer})
+    return render(request, "main/start_timer.html",
+                  {'timer': timer, 'work_sessions_left': timer.breaks_until_long_break + 1})
 
 
 @login_required(login_url='/register/')

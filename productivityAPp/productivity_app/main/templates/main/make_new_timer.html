@@ -59,6 +59,7 @@
 
         <input type="hidden" id="date_created" name="date_created" value="{{current_date}}">
         <input type="hidden" id="current_state" name="current_state" value="inactive">
+        <input type="hidden" id="breaks_until_long_break" name="breaks_until_long_break" value="-1">
 
         <button type="submit">Submit</button>
     </form>
@@ -88,6 +89,7 @@ function validateInputs() {
         document.getElementById('break_period').value = -1;
         document.getElementById('times_repeat').value = -1;
         document.getElementById('long_break').value = -1;
+        document.getElementById('breaks_until_long_break').value = -1;
 
         // Set sound_on_work_end to false and sound_on_break_end to true
         document.getElementById('sound_on_work_end').checked = false;

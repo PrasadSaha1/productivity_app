@@ -16,6 +16,7 @@ def create_default_timer(sender, instance, created, **kwargs):
             long_break=-1,
             sound_on_work_end=False,  # Default sound settings
             sound_on_break_end=True,
+            breaks_until_long_break=-1,
         )
         # Create a default timer for the new user
         PomodoroTimer.objects.create(
@@ -28,4 +29,5 @@ def create_default_timer(sender, instance, created, **kwargs):
             long_break=30,
             sound_on_work_end=True,  # Default sound settings
             sound_on_break_end=True,
+            breaks_until_long_break=3,
         )

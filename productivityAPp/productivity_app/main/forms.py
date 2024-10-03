@@ -6,7 +6,8 @@ class CreateNewTimer(forms.ModelForm):
     class Meta:
         model = PomodoroTimer
         fields = ['name', 'work_period', 'break_period', 'times_repeat', 'sound_on_work_end',
-                  'sound_on_break_end', 'date_created', 'long_break', 'auto_mode', 'current_state']
+                  'sound_on_break_end', 'date_created', 'long_break', 'auto_mode', 'current_state',
+                  "breaks_until_long_break", ]
 
     def clean(self):
         cleaned_data = super().clean()

@@ -75,8 +75,10 @@
             <h3>{{ timer }}</h3>
             {% if timer.current_state == "timer_running" or timer.current_state == "end_of_work_session" %}
                 <h3>Work Period</h3>
+                <h6 style="text-align: center;">{{work_sessions_left}} work sessions (including this one) until long break</h6>
             {% elif timer.current_state == "short_break_running" or timer.current_state == "end_of_short_break_session" %}
                 <h3>Short Break</h3>
+                <h6 style="text-align: center;">{{work_sessions_left}} work sessions until long break</h6>
             {% elif timer.current_state == "long_break_running" or timer.current_state == "end_of_long_break_session" %}
                 <h3>Long Break</h3>
             {% endif %}
@@ -86,42 +88,50 @@
                 <div class="other-buttons">
                     {% if timer.current_state == "timer_running" %}
                         <button>Pause</button>
-                        <button>Restart Current Work Session</button>
-                        <button>Start Short Break</button>
-                        <button>Start Long Break</button>
+                        <button onclick="startWorkSession('restart')">Restart Current Work Session</button>
+                        <button onclick="startShortBreak('normal')">Start Short Break</button>
+                        <button onclick="startLongBreak('normal')">Start Long Break</button>
                         <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                             {% csrf_token %}
                             <button type="submit" style="width: 300px">End Pomodoro</button>
                         </form>
                     {% elif timer.current_state == "short_break_running" %}
                         <button>Pause</button>
-                        <button>End Break</button>
-                        <button>Restart Break</button>
-                        <button>Start Long Break</button>
+                        <button onclick="startWorkSession('normal')">End Break</button>
+                        <button onclick="startShortBreak('restart')">Restart Break</button>
+                        <button onclick="startLongBreak('normal')">Start Long Break</button>
                         <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                             {% csrf_token %}
                             <button type="submit" style="width: 300px">End Pomodoro</button>
                         </form>
                     {% elif timer.current_state == "long_break_running" %}
                         <button>Pause</button>
-                        <button>End Long Break</button>
-                        <button>Restart Long Break</button>
+                        <button onclick="startWorkSession('normal')">End Long Break</button>
+                        <button onclick="startLongBreak('restart')">Restart Long Break</button>
                         <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                             {% csrf_token %}
                             <button type="submit" style="width: 300px">End Pomodoro</button>
                         </form>
                     {% elif timer.current_state == "end_of_work_session" %}
-                        <button>Start Normal Break (recommended) </button>
-                        <button>Start Long Break</button>
-                        <button>Start Work Session</button>
+                        <button onclick="startShortBreak('normal')">Start Normal Break (recommended) </button>
+                        <button onclick="startLongBreak('normal')">Start Long Break</button>
+                        <button onclick="startWorkSession('normal')">Start Work Session</button>
+                        <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                            {% csrf_token %}
+                            <button type="submit" style="width: 300px">End Pomodoro</button>
+                        </form>
+                    {% elif timer.current_state == "end_of_long_work_session" %}
+                        <button onclick="startLongBreak('normal')">Start Long Break (recommended) </button>
+                        <button onclick="startShortBreak('end_long_break')">Start Normal Break</button>
+                        <button onclick="startWorkSession('normal')">Start Work Session</button>
                         <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                             {% csrf_token %}
                             <button type="submit" style="width: 300px">End Pomodoro</button>
                         </form>
                     {% elif timer.current_state == "end_of_short_break_session" or timer.current_state == "end_of_long_break_session" %}
-                        <button>Start Work Session (recommended) </button>
-                        <button>Start Normal Break</button>
-                        <button>Start Long Break</button>
+                        <button onclick="startWorkSession('normal')">Start Work Session (recommended) </button>
+                        <button onclick="startShortBreak('end_short_break')">Start Normal Break</button>
+                        <button onclick="startLongBreak('normal')">Start Long Break</button>
                         <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                             {% csrf_token %}
                             <button type="submit" style="width: 300px">End Pomodoro</button>
@@ -153,7 +163,26 @@
 <audio id="endSound" src="{% static 'sounds/alarm.mp3' %}" preload="auto" loop></audio>
 
 <script>
-    let duration = {{ timer.work_period }} * 60; // Total duration in seconds
+    var oldState = "{{ timer.current_state }}";
+    let time_period;
+
+    switch (oldState) {
+        case "timer_running":
+            timer_period = {{ timer.work_period }}
+            break;
+        case "short_break_running":
+            timer_period = {{ timer.break_period }}
+            break;
+        case "long_break_running":
+            timer_period = {{ timer.long_break }}
+            break;
+        default:
+            console.log(oldState);
+            timer_period = 1
+            break;
+        }
+
+    let duration = timer_period * 5; // Total duration in seconds
     const timerDisplay = document.getElementById('timerDisplay');
     let countdownInterval; // Variable to hold the interval ID
     let remainingTime = getRemainingTime(); // Get remaining time from localStorage
@@ -223,15 +252,16 @@
         localStorage.removeItem('lastStartTime');
     }
 
+    var breaksUntilLongBreak = {{ timer.breaks_until_long_break }};
     // Function to change the timer state to "end_of_work_session"
-    function changeTimerStateToEndOfWorkSession() {
+    function changeTimerState(newState) {
         fetch("{% url 'update_timer_state' %}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRFToken": "{{ csrf_token }}", // Include CSRF token for security
             },
-            body: JSON.stringify({ state: "end_of_work_session" })
+            body: JSON.stringify({ state: newState })
         })
         .then(response => response.json())
         .then(data => {
@@ -247,17 +277,38 @@ function endTimer() {
     clearInterval(countdownInterval);
     timerDisplay.textContent = "Time's up!";
     clearStoredTimerData();
-    changeTimerStateToEndOfWorkSession(); // Change the timer state
+
+    let newState;
+
+    switch (oldState) {
+        case "timer_running":
+            newState = "end_of_work_session"
+            break
+        case "short_break_running":
+            newState = "end_of_short_break_session"
+            break;
+        case "long_break_running":
+            newState = "end_of_long_break_session"
+            break;
+        default:
+            console.log(oldState)
+            break
+    }
+    if (breaksUntilLongBreak === 0){  // probably don't need to check current newState
+        newState = "end_of_long_work_session"
+    }
+
+    changeTimerState(newState); // Change the timer state
     localStorage.setItem(timerEndedFlag, 'true'); // Set timer ended flag
 
     window.location.reload();
 }
 
 // Function to play sound
+const endSound = document.getElementById('endSound');
 function playEndSound() {
     const soundOnWorkEnd = {{ timer.sound_on_work_end|yesno:"true,false" }};
     if (soundOnWorkEnd) {
-        const endSound = document.getElementById('endSound');
         endSound.play();
     }
 }
@@ -277,9 +328,34 @@ function confirmEndPomodoro() {
     return confirm('Are you sure that you want to end this pomodoro?');
 }
 
+function startShortBreak(mode) {
+    console.log(mode);
+    console.log("normal, end_long_break", "restart")
+
+    // endSound.pause(); // Pause the sound
+    // endSound.currentTime = 0;
+
+    clearInterval(countdownInterval); // Clear existing countdown
+    remainingTime = {{ timer.break_period }} * 5; // Reset remaining time to short break duration (in seconds)
+    saveTimerState(remainingTime); // Save the new remaining time
+    changeTimerState("short_break_running"); // Update the state to indicate short break is running
+    startCountdown(); // Start the countdown for the short break
+
+    window.location.reload();
+}
+
+function startLongBreak(mode){
+    console.log(mode)
+    console.log("normal, end_short_break", "restart")
+}
+
+function startWorkSession(mode) {
+    console.log(mode)
+    console.log("normal, restart")
+}
 
 // Start the countdown when the page loads
-window.onload = function() {
+window.onload = function(mode) {
     checkTimerState(); // Check timer state on load
 };
 

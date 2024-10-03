@@ -15,6 +15,7 @@ class PomodoroTimer(models.Model):
     long_break = models.IntegerField(default=-1)
     auto_mode = models.BooleanField(default=False)
     current_state = models.CharField(default="inactive", max_length=200)
+    breaks_until_long_break = models.IntegerField(default=-1)
 
     def __str__(self):
         return self.name
