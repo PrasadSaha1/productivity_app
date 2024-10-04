@@ -15,7 +15,7 @@ from .forms import CreateNewTimer
 from .models import PomodoroTimer  # Import your model
 
 # Create your views here.
-
+breaks_until_long_break = -1
 @login_required(login_url='/register/')
 def home(response):
     return render(response, "main/home.html", {})
@@ -28,11 +28,11 @@ def settings(response):
 
 @login_required(login_url="/register/")
 def logout_view(request):
-    # Set all user's timers to "inactive"
+    global breaks_until_long_break
     for timer in PomodoroTimer.objects.filter(user=request.user):
         timer.current_state = "inactive"
         timer.save()
-
+    breaks_until_long_break = -1
     # Log out the user
     logout(request)
 
@@ -121,20 +121,24 @@ def productivity(request):
     timers = PomodoroTimer.objects.filter(user=request.user)
     for timer in timers:
         if timer.current_state != "inactive":
-            return render(request, "main/start_timer.html", {'timer': timer})
+            print(breaks_until_long_break)
+            return render(request, "main/start_timer.html",
+            {'timer': timer, 'work_sessions_left': breaks_until_long_break + 1,
+             "breaks_until_long_break": breaks_until_long_break})
     return render(request, "main/productivity.html", {'timers': timers})
 
 @login_required(login_url='/register/')
 def start_timer(request, id):
+    global breaks_until_long_break
     timer = PomodoroTimer.objects.get(id=id)
 
     if timer.current_state == "inactive":
         timer.current_state = "timer_running"
-        timer.breaks_until_long_break = timer.times_repeat - 1
+        breaks_until_long_break = timer.times_repeat - 1
         timer.save()
-    print(timer.current_state)
     return render(request, "main/start_timer.html",
-                  {'timer': timer, 'work_sessions_left': timer.breaks_until_long_break + 1})
+                  {'timer': timer, 'work_sessions_left': breaks_until_long_break + 1,
+                   "breaks_until_long_break": breaks_until_long_break})
 
 
 @login_required(login_url='/register/')
@@ -188,7 +192,15 @@ def update_timer_state(request, id):
 
     return JsonResponse({'status': 'error'}, status=400)
 
-
+@login_required(login_url="/register/")
+def update_breaks_until_long_break(request):
+    global breaks_until_long_break
+    if request.method == 'POST':
+        new_value = request.POST.get('new_value')  # Get the value from the JavaScript request
+        request.session['breaks_until_long_break'] = int(new_value)  # Update the variable
+        breaks_until_long_break = int(new_value)
+        return JsonResponse({'status': 'success', 'new_value': new_value})
+    return JsonResponse({'status': 'failure'})
 
 @method_decorator(csrf_exempt, name='dispatch')  # Exempt CSRF for simplicity (not recommended for production)
 class UpdateTimerStateView(View):
@@ -207,9 +219,11 @@ class UpdateTimerStateView(View):
 
 @csrf_exempt
 def end_pomodoro(request):
+    global breaks_until_long_break
     for timer in PomodoroTimer.objects.filter(user=request.user):
         timer.current_state = "inactive"
         timer.save()
+    breaks_until_long_break = -1
     return render(request, "main/after_end_pomodoro.html")
 
 

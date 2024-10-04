@@ -18,4 +18,6 @@ urlpatterns = [
      path('end_pomodoro/', views.end_pomodoro, name='end_pomodoro'),
      path('update-timer-state/', views.UpdateTimerStateView.as_view(), name='update_timer_state'),
      path('update_timer_state/<int:timer_id>/', views.update_timer_state, name='update_timer_state'),
+     path('update-breaks/', views.update_breaks_until_long_break, name='update_breaks_until_long_break'),
+     path('start_auto_timer/<int:id>', views.start_timer, name="start_auto_timer"),
 ]

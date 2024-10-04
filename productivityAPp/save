@@ -2,173 +2,213 @@
 {% load static %}
 
 {% block content %}
-    <style>
-        /* Center the content within the page */
-        .content-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding: 20px;
-        }
+<style>
+    /* Center the content within the page */
+    .content-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: 20px;
+    }
 
-        .timer-display {
-            font-size: 48px; /* Larger font for timer display */
-            text-align: center;  /* Center the countdown text */
-            margin: 20px 0;
-        }
+    .timer-display {
+        font-size: 48px; /* Larger font for timer display */
+        text-align: center;  /* Center the countdown text */
+        margin: 20px 0;
+    }
 
-        .form-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px;
-            max-width: 800px;
-            width: 100%;
-        }
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px;
+        max-width: 800px;
+        width: 100%;
+    }
 
-        h1 {
-            font-weight: normal;
-            margin-bottom: 20px;
-            text-align: center;
-        }
+    h1 {
+        font-weight: normal;
+        margin-bottom: 20px;
+        text-align: center;
+    }
 
-        .button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            margin: 5px;
-        }
+    .timer-card {
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        width: 100%;
+        max-width: 800px;  /* Set a max-width to prevent it from expanding too much */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 
-        .button:hover {
-            background-color: #0056b3;
-        }
+    .timer-card h3 {
+        margin: 0 0 10px;
+        text-align: center;
+    }
 
-        .timer-card {
-            background: #f8f9fa;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 10px 0;
-            width: 100%;
-            max-width: 800px;  /* Set a max-width to prevent it from expanding too much */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+    .timer-card p {
+        margin: 5px 0;
+    }
 
-        .timer-card h3 {
-            margin: 0 0 10px;
-            text-align: center;
-        }
+    .button-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px; /* Space between buttons */
+    }
 
-        .timer-card p {
-            margin: 5px 0;
-        }
+    .other-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 5px; /* Space between other buttons */
+        position: relative; /* Ensure this is positioned relative too */
+        z-index: 0; /* Default z-index */
+    }
+</style>
 
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px; /* Space between buttons */
-        }
+<div class="content-wrapper">
+    <h1>Current Timer</h1>
+    <div class="timer-card">
+        <h3>{{ timer }}</h3>
+        {% if timer.current_state == "timer_running" or timer.current_state == "end_of_work_session" %}
+            <h3>Work Period</h3>
+            <h6 style="text-align: center;">{{work_sessions_left}} work sessions (including this one) until long break</h6>
+        {% elif timer.current_state == "short_break_running" or timer.current_state == "end_of_short_break_session" %}
+            <h3>Short Break</h3>
+            <h6 style="text-align: center;">{{breaks_until_long_break}} work sessions until long break</h6>
+        {% elif timer.current_state == "long_break_running" or timer.current_state == "end_of_long_break_session" %}
+            <h3>Long Break</h3>
+        {% endif %}
+        <div class="timer-display" id="timerDisplay"></div>
 
-        .top-button {
-            position: relative; /* Ensure it is positioned relative to the button container */
-            z-index: 1; /* Bring this button above the others */
-        }
-
-        .other-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 5px; /* Space between other buttons */
-            position: relative; /* Ensure this is positioned relative too */
-            z-index: 0; /* Default z-index */
-        }
-    </style>
-
-    <div class="content-wrapper">
-        <h1>Current Timer</h1>
-        <div class="timer-card">
-            <h3>{{ timer }}</h3>
-            {% if timer.current_state == "timer_running" or timer.current_state == "end_of_work_session" %}
-                <h3>Work Period</h3>
-            {% elif timer.current_state == "short_break_running" or timer.current_state == "end_of_short_break_session" %}
-                <h3>Short Break</h3>
-            {% elif timer.current_state == "long_break_running" or timer.current_state == "end_of_long_break_session" %}
-                <h3>Long Break</h3>
-            {% endif %}
-            <div class="timer-display" id="timerDisplay"></div>
-
-            <div class="button-container">
-                <div class="other-buttons">
-                    {% if timer.current_state == "timer_running" %}
-                        <button>Pause</button>
-                        <button>Restart Current Work Session</button>
-                        <button>Start Short Break</button>
-                        <button>Start Long Break</button>
-                        <button>End Pomodoro</button>
-                    {% elif timer.current_state == "short_break_running" %}
-                        <button>Pause</button>
-                        <button>End Break</button>
-                        <button>Restart Break</button>
-                        <button>Start Long Break</button>
-                        <button>End Pomodoro</button>
-                    {% elif timer.current_state == "long_break_running" %}
-                        <button>Pause</button>
-                        <button>End Long Break</button>
-                        <button>Restart Long Break</button>
-                        <button>End Pomodoro</button>
-                    {% elif timer.current_state == "end_of_work_session" %}
-                        <button>Start Normal Break (recommended) </button>
-                        <button>Start Long Break</button>
-                        <button>Start Work Session</button>
-                        <button>End Pomodoro</button>
-                    {% elif timer.current_state == "end_of_short_break_session" or timer.current_state == "end_of_long_break_session" %}
-                        <button>Start Work Session (recommended) </button>
-                        <button>Start Normal Break</button>
-                        <button>Start Long Break</button>
-                        <button>End Pomodoro</button>
-                    {% endif %}
-                </div>
+        <div class="button-container">
+            <div class="other-buttons">
+                {% if timer.current_state == "timer_running" %}
+                    <button onclick="togglePause('pause')" id="pause">Pause</button>
+                    <button onclick="startWorkSession('restart')">Restart Current Work Session</button>
+                    <button onclick="startShortBreak()">Start Short Break</button>
+                    <button onclick="startLongBreak()">Start Long Break</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% elif timer.current_state == "short_break_running" %}
+                    <button onclick="togglePause('pause1')" id="pause1">Pause</button>
+                    <button onclick="startWorkSession('normal')">End Break</button>
+                    <button onclick="startShortBreak()">Restart Break</button>
+                    <button onclick="startLongBreak()">Start Long Break</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% elif timer.current_state == "long_break_running" %}
+                    <button onclick="togglePause('pause2')" id="pause2">Pause</button>
+                    <button onclick="startWorkSession('normal')">End Long Break</button>
+                    <button onclick="startLongBreak()">Restart Long Break</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% elif timer.current_state == "end_of_work_session" %}
+                    <button onclick="startShortBreak()" id="test">Start Normal Break (recommended) </button>
+                    <button onclick="startLongBreak()">Start Long Break</button>
+                    <button onclick="startWorkSession('normal')">Start Work Session</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% elif timer.current_state == "end_of_long_work_session" %}
+                    <button onclick="startLongBreak()">Start Long Break (recommended) </button>
+                    <button onclick="startShortBreak()">Start Normal Break</button>
+                    <button onclick="startWorkSession()">Start Work Session</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% elif timer.current_state == "end_of_short_break_session" or timer.current_state == "end_of_long_break_session" %}
+                    <button onclick="startWorkSession('normal')">Start Work Session (recommended) </button>
+                    <button onclick="startShortBreak(')">Start Normal Break</button>
+                    <button onclick="startLongBreak()">Start Long Break</button>
+                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
+                        {% csrf_token %}
+                        <button type="submit" style="width: 300px">End Pomodoro</button>
+                    </form>
+                {% endif %}
             </div>
-
-            {% if timer.work_period == -1 %}
-                <p>Work period: AUTO</p>
-                <p>Break period: AUTO</p>
-                <p>Sessions before Long Break: AUTO</p>
-                <p>Long Break: AUTO</p>
-            {% else %}
-                <p>Work period: {{ timer.work_period }} minutes</p>
-                <p>Break period: {{ timer.break_period }} minutes</p>
-                <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
-                <p>Long Break: {{ timer.long_break }} minutes</p>
-            {% endif %}
-
-            <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
-            <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
-            <p>Date Created: {{ timer.date_created|date:"m/d/Y" }}</p>
-
         </div>
-    </div>
 
-<!-- Include the audio element in your HTML -->
+        <p>Work period: {{ timer.work_period }} minutes</p>
+        <p>Break period: {{ timer.break_period }} minutes</p>
+        <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
+        <p>Long Break: {{ timer.long_break }} minutes</p>
+
+        <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
+        <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
+        <p>Date Created: {{ timer.date_created|date:"m/d/Y" }}</p>
+
+    </div>
+</div>
+
 <audio id="endSound" src="{% static 'sounds/alarm.mp3' %}" preload="auto" loop></audio>
 
 <script>
-    let duration = {{ timer.work_period }} * 4; // Total duration in seconds
+    let period;
+    var noTime = false;
+    oldState = "{{ timer.current_state }}";
+    switch (oldState) {
+        case "timer_running":
+            period = {{ timer.work_period }}
+            break;
+        case "short_break_running":
+            period = {{ timer.break_period }}
+            break;
+        case "long_break_running":
+            period = {{ timer.long_break }}
+            break;
+        default:
+            noTime = true;
+            break;
+    }
+
+    let oldTime;  //used for pausing
+    let duration = period * 5; // Total duration in seconds
     const timerDisplay = document.getElementById('timerDisplay');
     let countdownInterval; // Variable to hold the interval ID
     let remainingTime = getRemainingTime(); // Get remaining time from localStorage
     let lastStartTime = getLastStartTime(); // Retrieve the last start time from localStorage
+    let isPaused = getIsPaused();
+    let breaks = parseInt(localStorage.getItem('breaks_until_long_break')) || {{ timer.breaks_until_long_break }};
+
     const timerEndedFlag = 'timerEnded'; // Key for localStorage to track timer state
+
+    function checkButtonAndTimer() {
+        const pauseButton = document.querySelector('#pause');
+        const pauseButton1 = document.querySelector('#pause1');
+        const pauseButton2 = document.querySelector('#pause2');
+        console.log((pauseButton && ( "{{timer.current_state}}" === "end_of_work_session" || "{{timer.current_state}}" === "end_of_long_work_session")))
+        console.log("{{timer.current_state}}")
+
+        if (
+            (pauseButton && ( "{{timer.current_state}}" === "end_of_work_session" || "{{timer.current_state}}" === "end_of_long_work_session")) ||
+            (pauseButton1 && "{{timer.current_state}}" === "end_of_short_break_session") ||
+            (pauseButton2 && "{{timer.current_state}}" === "end_of_long_break_session")
+        ) {
+            console.log("hello");
+            window.location.reload();
+        }
+    }
+
+    checkButtonAndTimer();
+
 
     // Function to save remaining time and last start time to localStorage
     function saveTimerState(remainingTime) {
         localStorage.setItem('remainingTime', remainingTime);
         localStorage.setItem('lastStartTime', Date.now());
+        localStorage.setItem('isPaused', isPaused);
     }
 
     // Function to retrieve remaining time from localStorage
@@ -181,14 +221,30 @@
         return parseInt(localStorage.getItem('lastStartTime')) || Date.now();
     }
 
+    function getIsPaused() {
+        const isPaused = localStorage.getItem('isPaused');
+        return isPaused === 'true' ? true : false;
+    }
+
     // Function to handle the start of the countdown
-    function startCountdown() {
+    function startCountdown(resumeTime=true) {
+        if(noTime){
+            window.location.reload();
+        }
+
         timerDisplay.textContent = "Loading..."; // Display "Loading..." while the countdown initializes
 
         // Calculate the elapsed time since the last start
-        const elapsed = Math.floor((Date.now() - lastStartTime) / 1000);
-        remainingTime = Math.max(remainingTime - elapsed, 0);
 
+        var elapsed = 0
+        if (resumeTime){
+            elapsed = Math.floor((Date.now() - lastStartTime) / 1000);
+        }
+        else{
+            isPaused = false;
+        }
+
+        remainingTime = Math.max(remainingTime - elapsed, 0);
         // If remaining time is zero, handle the end of the timer
         if (remainingTime <= 0) {
             endTimer();
@@ -229,21 +285,23 @@
     }
 
     // Function to change the timer state to "end_of_work_session"
-    function changeTimerStateToEndOfWorkSession() {
+    function changeTimerState(newState) {
+        console.log(newState);
         fetch("{% url 'update_timer_state' %}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRFToken": "{{ csrf_token }}", // Include CSRF token for security
             },
-            body: JSON.stringify({ state: "end_of_work_session" })
+            body: JSON.stringify({ state: newState })
         })
         .then(response => response.json())
         .then(data => {
-            console.log("Timer state updated:", data);
+            // You can add additional logic here if needed
         })
         .catch(error => {
             console.error("Error updating timer state:", error);
+            window.location.reload();
         });
     }
 
@@ -252,17 +310,45 @@ function endTimer() {
     clearInterval(countdownInterval);
     timerDisplay.textContent = "Time's up!";
     clearStoredTimerData();
-    changeTimerStateToEndOfWorkSession(); // Change the timer state
+
+    let newState;
+
+    switch (oldState) {
+        case "timer_running":
+            newState = "end_of_work_session"
+            break
+        case "short_break_running":
+            newState = "end_of_short_break_session"
+            break;
+        case "long_break_running":
+            newState = "end_of_long_break_session"
+            break;
+        default:
+            break
+    }
+    if (breaks === 0 && newState === "end_of_work_session"){  // probably don't need to check current newState
+        newState = "end_of_long_work_session"
+    }
+
+    changeTimerState(newState); // Change the timer state
     localStorage.setItem(timerEndedFlag, 'true'); // Set timer ended flag
 
     window.location.reload();
+    console.log(newState);
 }
 
 // Function to play sound
+const endSound = document.getElementById('endSound');
 function playEndSound() {
-    const soundOnWorkEnd = {{ timer.sound_on_work_end|yesno:"true,false" }};
+    let soundOnWorkEnd;
+    if (oldState === "end_of_work_session"){
+        soundOnWorkEnd = {{ timer.sound_on_work_end|yesno:"true,false" }};
+    }
+    else{
+        soundOnWorkEnd = {{ timer.sound_on_break_end|yesno:"true,false" }};
+    }
+
     if (soundOnWorkEnd) {
-        const endSound = document.getElementById('endSound');
         endSound.play();
     }
 }
@@ -274,12 +360,80 @@ function checkTimerState() {
         timerDisplay.textContent = "Time's up!"; // Display time's up if timer ended
         playEndSound(); // Play sound after reloading
     } else {
-        startCountdown(); // Start countdown if timer hasn't ended
+        startCountdown(!isPaused); // Start countdown if timer hasn't ended
+    }
+}
+
+function confirmEndPomodoro() {
+    return confirm('Are you sure that you want to end this pomodoro?');
+}
+
+function startShortBreak() {
+    localStorage.clear();
+    localStorage.setItem(timerEndedFlag, 'false'); // Set timer ended flag
+    changeTimerState("short_break_running")
+    window.location.reload();
+}
+
+function startLongBreak(){
+    breaks = {{timer.times_repeat}}
+    localStorage.clear();
+    localStorage.setItem(timerEndedFlag, 'false'); // Set timer ended flag
+    changeTimerState("long_break_running")
+    updateBreaksUntilLongBreak(breaks);
+    window.location.reload();
+}
+
+function startWorkSession(mode) {
+    localStorage.clear();
+    localStorage.setItem(timerEndedFlag, 'false'); // Set timer ended flag
+    changeTimerState("timer_running");
+    if (mode === "normal"){
+          var new_value = breaks - 1;
+          localStorage.setItem('breaks_until_long_break', new_value);
+          updateBreaksUntilLongBreak(new_value);  // Example value for breaks_until_long_break
+    }
+    window.location.reload();
+}
+
+// Function to send the value to the backend
+function updateBreaksUntilLongBreak(newValue) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('/update-breaks/', {  // '/update-breaks/' should match your Django URL
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken  // CSRF token for security in Django
+        },
+        body: `new_value=${newValue}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+        } else {
+            console.error('Failed to update breaks_until_long_break');
+        }
+    });
+}
+
+// let isPaused = false; // Flag to track if the timer is paused
+function togglePause(id) {
+    if (isPaused) {
+        startCountdown(false);
+        document.getElementById(id).textContent = "Pause";
+        isPaused = false;
+    } else {
+        oldTime = Date.now();
+        clearInterval(countdownInterval);  // Stop the interval
+        document.getElementById(id).textContent = "Resume";
+        isPaused = true;
+        saveTimerState(remainingTime);     // Save the remaining time when paused
     }
 }
 
 // Start the countdown when the page loads
-window.onload = function() {
+window.onload = function(mode) {
     checkTimerState(); // Check timer state on load
 };
 
@@ -287,3 +441,238 @@ window.onload = function() {
 
 
 {% endblock %}
+
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.contrib.auth import authenticate, update_session_auth_hash, logout
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.http import require_POST
+import json
+
+from .forms import CreateNewTimer
+from .models import PomodoroTimer  # Import your model
+
+# Create your views here.
+# breaks_until_long_break = 0
+@login_required(login_url='/register/')
+def home(response):
+    return render(response, "main/home.html", {})
+
+
+@login_required(login_url="/register/")
+def settings(response):
+    return render(response, "main/settings.html", {})
+
+
+@login_required(login_url="/register/")
+def logout_view(request):
+    for timer in PomodoroTimer.objects.filter(user=request.user):
+        timer.current_state = "inactive"
+        timer.breaks_until_long_break = -1
+        timer.save()
+    # Log out the user
+    logout(request)
+
+    # Redirect to a custom page that will clear localStorage
+    return render(request, "main/clear_storage.html")
+
+
+@login_required(login_url="/register/")
+def change_username(request):
+    if request.method == 'POST':
+        new_username = request.POST.get('new_username')
+        password = request.POST.get('password')
+
+        if new_username and password:
+            # Check if the username is already taken
+            if User.objects.filter(username=new_username).exists():
+                return JsonResponse({'status': 'taken'})
+
+            # Check if the provided password is correct
+            user = authenticate(request, username=request.user.username, password=password)
+            if user is None:
+                return JsonResponse({'status': 'incorrect_password'})
+
+            # Change the username and save
+            request.user.username = new_username
+            request.user.save()
+            messages.success(request, 'Username successfully changed.')
+            return JsonResponse({'status': 'success'})
+        else:
+            return JsonResponse({'status': 'error'})
+    return render(request, 'main/change_username.html')
+
+
+@login_required(login_url="/register/")
+def change_password(request):
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        # Check if the current password is correct
+        user = authenticate(request, username=request.user.username, password=current_password)
+        if user is None:
+            return JsonResponse({'status': 'incorrect_password'})
+
+        # Check if the new passwords match
+        if new_password != confirm_password:
+            return JsonResponse({'status': 'password_mismatch'})
+
+        # Update the password and save the user
+        user.set_password(new_password)
+        user.save()
+
+        # Keep the user logged in after changing the password
+        update_session_auth_hash(request, user)
+
+        messages.success(request, 'Password successfully changed.')
+        return JsonResponse({'status': 'success'})
+
+    return render(request, "main/change_password.html", {})
+
+
+@login_required(login_url='/register/')
+def make_new_timer(request):
+    if request.method == "POST":
+        form = CreateNewTimer(request.POST)
+
+        if form.is_valid():
+            timer = form.save(commit=False)  # Save the form but don't commit yet
+            timer.user = request.user  # Assign the logged-in user to the timer
+            timer.save()  # Now save the timer
+
+            # Redirect to the productivity view
+            return redirect('pomodoro')  # Use the URL name for redirection
+        else:
+            print(form.errors)
+    else:
+        form = CreateNewTimer()
+
+    current_date = timezone.now().strftime('%Y-%m-%d')
+    return render(request, "main/make_new_timer.html", {'form': form, 'current_date': current_date})
+
+
+@login_required(login_url='/register/')
+def productivity(request):
+    timers = PomodoroTimer.objects.filter(user=request.user)
+    for timer in timers:
+        if timer.current_state != "inactive":
+            file = "main/start_timer.html"
+            if timer.work_period == -1:
+                file = "main/start_auto_timer.html"
+            return render(request, file,
+                          {'timer': timer, "breaks_until_long_break": timer.breaks_until_long_break})
+    return render(request, "main/productivity.html", {'timers': timers})
+
+@login_required(login_url='/register/')
+def start_timer(request, id):
+    timer = PomodoroTimer.objects.get(id=id)
+
+    if timer.current_state == "inactive":
+        timer.current_state = "timer_running"
+        timer.breaks_until_long_break = timer.times_repeat - 1
+        timer.save()
+    file = "main/start_timer.html"
+    if timer.work_period == -1:
+        file = "main/start_auto_timer.html"
+    return render(request, file,
+                  {'timer': timer, 'work_sessions_left': timer.breaks_until_long_break + 1,
+                   "breaks_until_long_break": timer.breaks_until_long_break})
+
+
+@login_required(login_url='/register/')
+def edit_timer(request, id):
+    oringial_timer = PomodoroTimer.objects.get(id=id)
+    date_created = str(oringial_timer.date_created)[:10]
+
+    if request.method == "POST":
+        form = CreateNewTimer(request.POST)
+
+        if form.is_valid():
+            timer = form.save(commit=False)  # Save the form but don't commit yet
+            timer.user = request.user  # Assign the logged-in user to the timer
+            timer.save()  # Now save the timer
+            oringial_timer.delete()
+
+            # Redirect to the productivity view
+            return redirect('pomodoro')  # Use the URL name for redirection
+        else:
+            print(form.errors)
+    else:
+        form = CreateNewTimer()
+
+    return render(request, "main/edit_timer.html", {'timer': oringial_timer, "date_created": date_created})
+
+
+@login_required(login_url='/register/')
+def delete_timer(request, id):
+    timer = PomodoroTimer.objects.get(id=id)
+    timer.delete()
+
+    timers = PomodoroTimer.objects.filter(user=request.user)
+    return render(request, "main/productivity.html", {'timers': timers})
+
+
+@require_POST
+@login_required(login_url="/register/")
+def update_timer_state(request, id):
+    timer = get_object_or_404(PomodoroTimer, id=id, user=request.user)
+
+    # Extract the new state from the request body
+    data = json.loads(request.body)
+    new_state = data.get('state')
+
+    # Update the timer's state
+    if new_state:
+        timer.current_state = new_state
+        timer.save()
+        return JsonResponse({'status': 'success'})
+
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required(login_url="/register/")
+@require_POST
+@csrf_exempt
+def update_breaks_until_long_break(request):
+    if request.method == 'POST':
+        new_value = int(request.POST.get('new_value', 0))
+        for timer in PomodoroTimer.objects.filter(user=request.user):
+            if timer.current_state != "inactive":
+                timer.breaks_until_long_break = int(new_value)
+                timer.save()
+        return JsonResponse({'status': 'success', 'new_value': new_value})
+    return JsonResponse({'status': 'failure'})
+
+@method_decorator(csrf_exempt, name='dispatch')  # Exempt CSRF for simplicity (not recommended for production)
+class UpdateTimerStateView(View):
+    def post(self, request, *args, **kwargs):
+        data = json.loads(request.body)
+        new_state = data.get('state')
+
+        # Update your timer instance here
+        for timer in PomodoroTimer.objects.filter(user=request.user):
+            if timer.current_state != "inactive":
+                timer.current_state = new_state
+                timer.save()
+
+        return JsonResponse({'success': True, 'new_state': new_state})
+
+
+@csrf_exempt
+def end_pomodoro(request):
+    for timer in PomodoroTimer.objects.filter(user=request.user):
+        timer.current_state = "inactive"
+        timer.breaks_until_long_break = -1
+        timer.save()
+    return render(request, "main/after_end_pomodoro.html")
+
+

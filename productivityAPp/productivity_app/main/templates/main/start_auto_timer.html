@@ -97,7 +97,7 @@
                     </form>
                 {% elif timer.current_state == "short_break_running" %}
                     <button onclick="togglePause('pause1')" id="pause1">Pause</button>
-                    <button onclick="startWorkSession('normal')">End Break</button> <!-- Issue -->
+                    <button onclick="startWorkSession('normal')">End Break</button>
                     <button onclick="startShortBreak()">Restart Break</button>
                     <button onclick="startLongBreak()">Start Long Break</button>
                     <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
@@ -106,24 +106,8 @@
                     </form>
                 {% elif timer.current_state == "long_break_running" %}
                     <button onclick="togglePause('pause2')" id="pause2">Pause</button>
-                    <button onclick="startWorkSession('normal')">End Long Break</button>  <!-- Issue -->
+                    <button onclick="startWorkSession('normal')">End Long Break</button>
                     <button onclick="startLongBreak()">Restart Long Break</button>
-                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
-                        {% csrf_token %}
-                        <button type="submit" style="width: 300px">End Pomodoro</button>
-                    </form>
-                {% elif timer.current_state == "end_of_work_session" %}
-                    <button onclick="startShortBreak()" id="test">Start Normal Break (recommended) </button>
-                    <button onclick="startLongBreak()">Start Long Break</button>
-                    <button onclick="startWorkSession('normal')">Start Work Session</button>
-                    <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
-                        {% csrf_token %}
-                        <button type="submit" style="width: 300px">End Pomodoro</button>
-                    </form>
-                {% elif timer.current_state == "end_of_long_work_session" %}
-                    <button onclick="startLongBreak()">Start Long Break (recommended) </button>
-                    <button onclick="startShortBreak()">Start Normal Break</button>
-                    <button onclick="startWorkSession()">Start Work Session</button>
                     <form action="{% url 'end_pomodoro' %}" method="post" onsubmit="return confirmEndPomodoro()">
                         {% csrf_token %}
                         <button type="submit" style="width: 300px">End Pomodoro</button>
@@ -140,17 +124,10 @@
             </div>
         </div>
 
-        {% if timer.work_period == -1 %}
-            <p>Work period: AUTO</p>
-            <p>Break period: AUTO</p>
-            <p>Sessions before Long Break: AUTO</p>
-            <p>Long Break: AUTO</p>
-        {% else %}
-            <p>Work period: {{ timer.work_period }} minutes</p>
-            <p>Break period: {{ timer.break_period }} minutes</p>
-            <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
-            <p>Long Break: {{ timer.long_break }} minutes</p>
-        {% endif %}
+        <p>Work period: AUTO</p>
+        <p>Break period: AUTO</p>
+        <p>Sessions before Long Break: AUTO</p>
+        <p>Long Break: AUTO</p>
 
         <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
         <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
@@ -187,13 +164,15 @@
     let remainingTime = getRemainingTime(); // Get remaining time from localStorage
     let lastStartTime = getLastStartTime(); // Retrieve the last start time from localStorage
     let isPaused = getIsPaused();
+    let timePassed = getTimePassed()
     const timerEndedFlag = 'timerEnded'; // Key for localStorage to track timer state
 
     function checkButtonAndTimer() {
         const pauseButton = document.querySelector('#pause');
         const pauseButton1 = document.querySelector('#pause1');
         const pauseButton2 = document.querySelector('#pause2');
-        console.log(oldState);
+        console.log((pauseButton && ( "{{timer.current_state}}" === "end_of_work_session" || "{{timer.current_state}}" === "end_of_long_work_session")))
+        console.log("{{timer.current_state}}")
 
         if (
             (pauseButton && ( "{{timer.current_state}}" === "end_of_work_session" || "{{timer.current_state}}" === "end_of_long_work_session")) ||
@@ -204,6 +183,9 @@
             window.location.reload();
         }
     }
+
+    checkButtonAndTimer();
+
 
     // Function to save remaining time and last start time to localStorage
     function saveTimerState(remainingTime) {
@@ -220,6 +202,10 @@
     // Function to retrieve last start time from localStorage
     function getLastStartTime() {
         return parseInt(localStorage.getItem('lastStartTime')) || Date.now();
+    }
+
+    function getTimePassed() {
+        return parseInt(localStorage.getItem('getTimePassed')) || 0;
     }
 
     function getIsPaused() {
@@ -283,10 +269,12 @@
     function clearStoredTimerData() {
         localStorage.removeItem('remainingTime');
         localStorage.removeItem('lastStartTime');
+        localStorage.removeItem('timePassed');
     }
 
     // Function to change the timer state to "end_of_work_session"
     function changeTimerState(newState) {
+        console.log(newState);
         fetch("{% url 'update_timer_state' %}", {
             method: "POST",
             headers: {
@@ -333,7 +321,9 @@ function endTimer() {
 
     changeTimerState(newState); // Change the timer state
     localStorage.setItem(timerEndedFlag, 'true'); // Set timer ended flag
+
     window.location.reload();
+    console.log(newState);
 }
 
 // Function to play sound
@@ -356,11 +346,6 @@ function playEndSound() {
 function checkTimerState() {
     const timerEnded = localStorage.getItem(timerEndedFlag);
     if (timerEnded === 'true') {
-                console.log("{{timer.current_state}}")
-        if (oldState === "timer_running" || oldState === "short_break_running"
-        || oldState === "long_break_running") {
-                window.location.reload();
-            }
         timerDisplay.textContent = "Time's up!"; // Display time's up if timer ended
         playEndSound(); // Play sound after reloading
     } else {
