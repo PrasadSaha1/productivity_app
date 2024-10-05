@@ -139,18 +139,10 @@
                 {% endif %}
             </div>
         </div>
-
-        {% if timer.work_period == -1 %}
-            <p>Work period: AUTO</p>
-            <p>Break period: AUTO</p>
-            <p>Sessions before Long Break: AUTO</p>
-            <p>Long Break: AUTO</p>
-        {% else %}
-            <p>Work period: {{ timer.work_period }} minutes</p>
-            <p>Break period: {{ timer.break_period }} minutes</p>
-            <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
-            <p>Long Break: {{ timer.long_break }} minutes</p>
-        {% endif %}
+        <p>Work period: {{ timer.work_period }} minutes</p>
+        <p>Break period: {{ timer.break_period }} minutes</p>
+        <p>Sessions before Long Break: {{ timer.times_repeat }}</p>
+        <p>Long Break: {{ timer.long_break }} minutes</p>
 
         <p>{{ timer.sound_on_work_end|yesno:"Sound on end of work period,No sound on end of work period" }}</p>
         <p>{{ timer.sound_on_break_end|yesno:"Sound on end of break period,No sound on end of break period" }}</p>
@@ -189,6 +181,7 @@
     let isPaused = getIsPaused();
     const timerEndedFlag = 'timerEnded'; // Key for localStorage to track timer state
 
+    /*
     function checkButtonAndTimer() {
         const pauseButton = document.querySelector('#pause');
         const pauseButton1 = document.querySelector('#pause1');
@@ -203,7 +196,8 @@
         }
     }
 
-    // checkButtonAndTimer();
+    checkButtonAndTimer();
+    */
 
     // Function to save remaining time and last start time to localStorage
     function saveTimerState() {

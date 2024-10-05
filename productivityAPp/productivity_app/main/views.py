@@ -9,10 +9,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
+from django.http import HttpResponseRedirect
 import json
 
-from .forms import CreateNewTimer
-from .models import PomodoroTimer  # Import your model
+from .forms import CreateNewTimer, CreateNewList
+from .models import PomodoroTimer, TodoList
 
 # Create your views here.
 breaks_until_long_break = -1
@@ -148,7 +149,6 @@ def start_timer(request, id):
     file = "main/start_timer.html"
     if timer.work_period == -1:
         file = "main/start_auto_timer.html"
-    print(work_time_elapsed)
 
     return render(request, file,
                   {'timer': timer, 'work_sessions_left': breaks_until_long_break + 1,
@@ -174,7 +174,6 @@ def edit_timer(request, id):
             # Redirect to the productivity view
             return redirect('pomodoro')  # Use the URL name for redirection
         else:
-            print(str(oringial_timer.date_created)[:10])
             print(form.errors)
     else:
         form = CreateNewTimer()
@@ -264,3 +263,49 @@ def update_last_work_session_length(request):
         last_work_session_length = int(new_value)
         return JsonResponse({'status': 'success', 'new_value': new_value})
     return JsonResponse({'status': 'failure'})
+
+@login_required(login_url="/register/")
+def todo(request):
+    ls = TodoList.objects.filter(user=request.user).order_by('-id')
+    return render(request, "main/todo.html", {"ls": ls})
+
+
+@login_required(login_url='/register/')
+def create_todo_list(request):
+    if request.method == "POST":
+        form = CreateNewList(request.POST)
+
+        if form.is_valid():
+            n = form.cleaned_data["name"]
+            t = TodoList(name=n)
+            t.save()
+            request.user.todolist.add(t)
+
+        # return redirect("/%i" % t.id)
+        return HttpResponseRedirect("/view_single_list/%i" % t.id)
+
+    else:
+        form = CreateNewList()
+    return render(request, "main/create_todo_list.html", {"form": form})
+
+
+@login_required(login_url='/register/')
+def view_single_list(request, id):
+    ls = get_object_or_404(TodoList, id=id)
+
+    if ls in request.user.todolist.all():
+        if request.method == "POST":
+            for item in ls.item_set.all():
+                if request.POST.get("c" + str(item.id)) == "clicked":
+                    item.delete()
+                else:
+                    item.complete = False
+                    item.save()
+
+            if request.POST.get("newItem"):
+                txt = request.POST.get("new")
+                ls.item_set.create(text=txt, complete=False)
+
+        return render(request, "main/view_single_list.html", {"ls": ls})
+    else:
+        return render(request, "main/todo.html", {})

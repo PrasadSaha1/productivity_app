@@ -21,3 +21,7 @@ class CreateNewTimer(forms.ModelForm):
             cleaned_data['long_break'] = -1
 
         return cleaned_data
+
+
+class CreateNewList(forms.Form):
+    name = forms.CharField(label="Name", max_length=30)

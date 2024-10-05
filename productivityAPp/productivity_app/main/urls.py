@@ -22,4 +22,7 @@ urlpatterns = [
      path("update_work_time_elapsed/", views.update_work_time_elapsed, name="update_work_time_elapsed"),
      path("update_last_work_session_length/", views.update_last_work_session_length, name="update_last_work_session_length"),
      path('start_auto_timer/<int:id>', views.start_timer, name="start_auto_timer"),
+     path("todo/", views.todo, name="todo"),
+     path("create_todo_list/", views.create_todo_list, name="create_todo_list"),
+     path('view_single_list/<int:id>', views.view_single_list, name="view_single_list"),
 ]
