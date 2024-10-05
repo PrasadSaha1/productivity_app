@@ -193,20 +193,20 @@
         const pauseButton = document.querySelector('#pause');
         const pauseButton1 = document.querySelector('#pause1');
         const pauseButton2 = document.querySelector('#pause2');
-        console.log(oldState);
 
         if (
             (pauseButton && ( "{{timer.current_state}}" === "end_of_work_session" || "{{timer.current_state}}" === "end_of_long_work_session")) ||
             (pauseButton1 && "{{timer.current_state}}" === "end_of_short_break_session") ||
             (pauseButton2 && "{{timer.current_state}}" === "end_of_long_break_session")
         ) {
-            console.log("hello");
             window.location.reload();
         }
     }
 
+    // checkButtonAndTimer();
+
     // Function to save remaining time and last start time to localStorage
-    function saveTimerState(remainingTime) {
+    function saveTimerState() {
         localStorage.setItem('remainingTime', remainingTime);
         localStorage.setItem('lastStartTime', Date.now());
         localStorage.setItem('isPaused', isPaused);
@@ -268,7 +268,7 @@
         timerDisplay.textContent = minutes + ":" + seconds;
 
         // Save the remaining time to localStorage
-        saveTimerState(remainingTime);
+        saveTimerState();
 
         // If timer is finished
         if (--remainingTime < 0) {
@@ -300,7 +300,6 @@
             // You can add additional logic here if needed
         })
         .catch(error => {
-            console.error("Error updating timer state:", error);
             window.location.reload();
         });
     }
@@ -356,7 +355,6 @@ function playEndSound() {
 function checkTimerState() {
     const timerEnded = localStorage.getItem(timerEndedFlag);
     if (timerEnded === 'true') {
-                console.log("{{timer.current_state}}")
         if (oldState === "timer_running" || oldState === "short_break_running"
         || oldState === "long_break_running") {
                 window.location.reload();
@@ -416,7 +414,6 @@ function updateBreaksUntilLongBreak(newValue) {
     .then(data => {
         if (data.status === 'success') {
         } else {
-            console.error('Failed to update breaks_until_long_break');
         }
     });
 }
@@ -432,7 +429,7 @@ function togglePause(id) {
         clearInterval(countdownInterval);  // Stop the interval
         document.getElementById(id).textContent = "Resume";
         isPaused = true;
-        saveTimerState(remainingTime);     // Save the remaining time when paused
+        saveTimerState();     // Save the remaining time when paused
     }
 }
 

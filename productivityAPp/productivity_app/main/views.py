@@ -16,6 +16,9 @@ from .models import PomodoroTimer  # Import your model
 
 # Create your views here.
 breaks_until_long_break = -1
+work_time_elapsed = 0
+last_work_session_length = 0
+
 @login_required(login_url='/register/')
 def home(response):
     return render(response, "main/home.html", {})
@@ -28,12 +31,13 @@ def settings(response):
 
 @login_required(login_url="/register/")
 def logout_view(request):
-    global breaks_until_long_break
+    global breaks_until_long_break, last_work_session_length, work_time_elapsed
     for timer in PomodoroTimer.objects.filter(user=request.user):
         timer.current_state = "inactive"
         timer.save()
     breaks_until_long_break = -1
-    # Log out the user
+    last_work_session_length = 0
+    work_time_elapsed = 0
     logout(request)
 
     # Redirect to a custom page that will clear localStorage
@@ -121,10 +125,14 @@ def productivity(request):
     timers = PomodoroTimer.objects.filter(user=request.user)
     for timer in timers:
         if timer.current_state != "inactive":
-            print(breaks_until_long_break)
-            return render(request, "main/start_timer.html",
+            file = "main/start_timer.html"
+            if timer.work_period == -1:
+                file = "main/start_auto_timer.html"
+            return render(request, file,
             {'timer': timer, 'work_sessions_left': breaks_until_long_break + 1,
-             "breaks_until_long_break": breaks_until_long_break})
+             "breaks_until_long_break": breaks_until_long_break,
+             "last_work_session_length": last_work_session_length,
+             "work_time_elapsed": work_time_elapsed})
     return render(request, "main/productivity.html", {'timers': timers})
 
 @login_required(login_url='/register/')
@@ -136,9 +144,17 @@ def start_timer(request, id):
         timer.current_state = "timer_running"
         breaks_until_long_break = timer.times_repeat - 1
         timer.save()
-    return render(request, "main/start_timer.html",
+
+    file = "main/start_timer.html"
+    if timer.work_period == -1:
+        file = "main/start_auto_timer.html"
+    print(work_time_elapsed)
+
+    return render(request, file,
                   {'timer': timer, 'work_sessions_left': breaks_until_long_break + 1,
-                   "breaks_until_long_break": breaks_until_long_break})
+                   "breaks_until_long_break": breaks_until_long_break,
+                   "work_time_elapsed": work_time_elapsed,
+                   "last_work_session_length": last_work_session_length})
 
 
 @login_required(login_url='/register/')
@@ -219,12 +235,32 @@ class UpdateTimerStateView(View):
 
 @csrf_exempt
 def end_pomodoro(request):
-    global breaks_until_long_break
+    global breaks_until_long_break, last_work_session_length, work_time_elapsed
     for timer in PomodoroTimer.objects.filter(user=request.user):
         timer.current_state = "inactive"
         timer.save()
     breaks_until_long_break = -1
+    last_work_session_length = 0
+    work_time_elapsed = 0
     return render(request, "main/after_end_pomodoro.html")
 
+@login_required(login_url="/register/")
+def update_work_time_elapsed(request):
+    global work_time_elapsed
+    if request.method == 'POST':
+        new_value = request.POST.get('new_value')
+        request.session['work_time_elapsed'] = int(new_value)
+        work_time_elapsed = int(new_value)
+        return JsonResponse({'status': 'success', 'new_value': new_value})
+    return JsonResponse({'status': 'failure'})
 
 
+@login_required(login_url="/register/")
+def update_last_work_session_length(request):
+    global last_work_session_length
+    if request.method == 'POST':
+        new_value = request.POST.get('new_value')
+        request.session['last_work_session_length'] = int(new_value)
+        last_work_session_length = int(new_value)
+        return JsonResponse({'status': 'success', 'new_value': new_value})
+    return JsonResponse({'status': 'failure'})

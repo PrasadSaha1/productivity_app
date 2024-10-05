@@ -19,5 +19,7 @@ urlpatterns = [
      path('update-timer-state/', views.UpdateTimerStateView.as_view(), name='update_timer_state'),
      path('update_timer_state/<int:timer_id>/', views.update_timer_state, name='update_timer_state'),
      path('update-breaks/', views.update_breaks_until_long_break, name='update_breaks_until_long_break'),
+     path("update_work_time_elapsed/", views.update_work_time_elapsed, name="update_work_time_elapsed"),
+     path("update_last_work_session_length/", views.update_last_work_session_length, name="update_last_work_session_length"),
      path('start_auto_timer/<int:id>', views.start_timer, name="start_auto_timer"),
 ]
