@@ -1,0 +1,104 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<style>
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centers form elements horizontally */
+    }
+
+    .form-container input,
+    .form-container label {
+        margin-bottom: 10px; /* Adjust this value to change the space between elements */
+    }
+
+    .form-container button {
+        margin-top: 20px; /* Space above the submit button */
+    }
+</style>
+
+<div id="content" style="text-align: center;">
+    <h1 style="font-weight: normal;">Pomodoro Timer Setup</h1>
+
+    <form method="post" action="{% url 'make_new_timer' %}" class="form-container" onsubmit="return validateInputs()">
+        {% csrf_token %}
+
+        <label for="timer_name">Name of timer</label>
+        <input type="text" id="timer_name" name="name" placeholder="Name of timer" required>
+
+        <label>
+            <input type="checkbox" id="auto_mode" name="auto_mode" onclick="toggleInputs()">
+            Enable auto mode?
+            <br>By enabling auto mode, the timers will not operate based on pre-determined values.
+            <br>Instead, you will choose when you are ready for a break.
+            <br>If a timer is in auto mode, it can't be edited at a later time.
+        </label>
+
+        <label for="work_period">Work period (minutes)</label>
+        <input type="number" id="work_period" name="work_period" placeholder="Work period" min="1" required>
+
+        <label for="break_period">Break period (minutes)</label>
+        <input type="number" id="break_period" name="break_period" placeholder="Break period" min="1" required>
+
+        <label for="times_repeat">Sessions before Long Break</label>
+        <input type="number" id="times_repeat" name="times_repeat" placeholder="Times to Repeat" min="1" required value="{{timer.times_repeat}}">
+
+        <label for="times_repeat">Long Break (minutes)</label>
+        <input type="number" id="long_break" name="long_break" placeholder="Long Break" min="1" required value="{{timer.long_break}}">
+
+        <label>
+            <input type="checkbox" id="sound_on_work_end" name="sound_on_work_end">
+            Sound upon the end of work period?
+        </label>
+
+        <label>
+            <input type="checkbox" id="sound_on_break_end" name="sound_on_break_end">
+            Sound upon the end of break period?
+        </label>
+
+        <input type="hidden" id="date_created" name="date_created" value="{{current_date}}">
+        <input type="hidden" id="current_state" name="current_state" value="inactive">
+        <input type="hidden" id="breaks_until_long_break" name="breaks_until_long_break" value="-1">
+
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+<script>
+    function toggleInputs() {
+        const autoModeCheckbox = document.getElementById('auto_mode');
+        const formElements = document.querySelectorAll('#work_period, #break_period, #times_repeat, #long_break, #sound_on_work_end, #sound_on_break_end');
+
+        formElements.forEach(element => {
+            element.disabled = autoModeCheckbox.checked;
+        });
+    }
+
+    // Call toggleInputs on page load in case auto mode is pre-checked
+    window.onload = toggleInputs;
+
+function validateInputs() {
+    const autoModeCheckbox = document.getElementById('auto_mode');
+
+    if (autoModeCheckbox.checked) {
+        document.getElementById('auto_mode').checked = false;
+        toggleInputs();
+        // Set all numeric inputs to -1
+        document.getElementById('work_period').value = -1;
+        document.getElementById('break_period').value = -1;
+        document.getElementById('times_repeat').value = -1;
+        document.getElementById('long_break').value = -1;
+        document.getElementById('breaks_until_long_break').value = -1;
+
+        // Set sound_on_work_end to false and sound_on_break_end to true
+        document.getElementById('sound_on_work_end').checked = false;
+        document.getElementById('sound_on_break_end').checked = true;
+    }
+
+    return true; // Allow form submission
+}
+
+</script>
+
+{% endblock %}

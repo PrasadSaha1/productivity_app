@@ -1,0 +1,36 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<style>
+    .button-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centers buttons horizontally */
+    }
+
+    .button-container button {
+        margin-bottom: 10px; /* Adjust this value to change the space between buttons */
+    }
+
+    .button-container button:last-child {
+        margin-bottom: 0; /* Removes bottom margin for the last button */
+    }
+</style>
+
+<div id="content" style="text-align: center;">
+    <h1 style="font-weight: normal;">Logged in as {{ user.username }}</h1>
+    <div class="button-container">
+        <button onclick="window.location.href='{% url 'change_username' %}'">Change Username</button>
+        <button onclick="window.location.href='{% url 'change_password' %}'">Change Password</button>
+        <form method="post" action="{% url 'logout_view' %}" onsubmit="return confirmLogout();">
+            {% csrf_token %}
+            <button type="submit">Log out</button>
+        </form>
+    </div>
+</div>
+<script>
+function confirmLogout() {
+    return confirm('Are you sure you want to log out? This will cancel current timers.');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<style>
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centers form elements horizontally */
+    }
+
+    .form-container input,
+    .form-container label {
+        margin-bottom: 10px; /* Adjust this value to change the space between elements */
+    }
+
+    .form-container label {
+        margin-bottom: 5px; /* Space specifically between radio options */
+    }
+
+    .form-container button {
+        margin-top: 10px; /* Decreased space above the submit button */
+    }
+
+    /* Style for the date input and checkboxes */
+    .date-input,
+    .days-checkboxes {
+        display: none; /* Hide by default */
+    }
+
+    .task-category {
+        display: flex; /* Align inputs and buttons in a row */
+        align-items: center; /* Center the items vertically */
+        margin-bottom: 2px; /* Reduced space between task category inputs */
+    }
+
+    .task-category input {
+        margin-right: 5px; /* Space between input and delete button */
+    }
+
+    /* Style for the delete button */
+    .delete-button {
+        font-size: 12px; /* Smaller font size */
+        padding: 5px 8px; /* Smaller padding */
+        margin-left: 5px; /* Space on the left side of the button */
+        cursor: pointer; /* Change cursor on hover */
+        background-color: #ff4d4d; /* Red background for delete button */
+        color: white; /* White text */
+        border: none; /* Remove border */
+        border-radius: 5px; /* Rounded corners */
+        transition: background-color 0.3s; /* Smooth transition for hover effect */
+        margin-bottom: 20px;
+    }
+
+    .delete-button:hover {
+        background-color: #ff1a1a; /* Darker red on hover */
+    }
+</style>
+
+<div id="content" style="text-align: center;">
+    <h1 style="font-weight: normal;">Make New Schedule</h1>
+
+    <form method="post" action="{% url 'create_scheduler' %}" class="form-container">
+        {% csrf_token %}
+
+        <label for="timer_name">Name of Schedule</label>
+        <input style="margin-bottom: 50px;" type="text" id="timer_name" name="name" placeholder="Name of Schedule" required>
+
+        <h2 style="font-weight: normal;">Task Categories</h2>
+        <div id="taskCategoriesContainer"></div>
+        <button style="margin-bottom: 50px;" type="button" onclick="addTaskCategory()">Add Task Category</button>
+
+        <h2 style="font-weight: normal;">Days Active</h2>
+        <label>
+            <input type="radio" name="daysActive" value="repeating" required onclick="toggleDaysInput()">
+            Repeating on certain days
+        </label>
+
+        <label>
+            <input type="radio" name="daysActive" value="specific" onclick="toggleDaysInput()">
+            Only on a specific date
+        </label>
+
+        <label>
+            <input type="radio" name="daysActive" value="never" onclick="toggleDaysInput()">
+            Never
+        </label>
+
+        <!-- Date input field -->
+        <div id="dateContainer" class="date-input">
+            <label for="specific_date">Select Date:</label>
+            <input type="date" id="specific_date" name="specific_date">
+        </div>
+
+        <!-- Checkboxes for days of the week -->
+        <div id="daysContainer" class="days-checkboxes">
+            <h3 style="font-weight: normal;">Select Days:</h3>
+            <label><input type="checkbox" name="days" value="monday"> Monday</label><br>
+            <label><input type="checkbox" name="days" value="tuesday"> Tuesday</label><br>
+            <label><input type="checkbox" name="days" value="wednesday"> Wednesday</label><br>
+            <label><input type="checkbox" name="days" value="thursday"> Thursday</label><br>
+            <label><input type="checkbox" name="days" value="friday"> Friday</label><br>
+            <label><input type="checkbox" name="days" value="saturday"> Saturday</label><br>
+            <label><input type="checkbox" name="days" value="sunday"> Sunday</label><br>
+        </div>
+
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+<script>
+    function toggleDaysInput() {
+        const dateContainer = document.getElementById('dateContainer');
+        const daysContainer = document.getElementById('daysContainer');
+        const specificRadio = document.querySelector('input[name="daysActive"][value="specific"]');
+        const repeatingRadio = document.querySelector('input[name="daysActive"][value="repeating"]');
+
+        // Show the date input if "Only on a specific date" is selected
+        if (specificRadio.checked) {
+            dateContainer.style.display = 'block';
+            daysContainer.style.display = 'none'; // Hide days checkboxes
+        }
+        // Show the checkboxes if "Repeating on certain days" is selected
+        else if (repeatingRadio.checked) {
+            daysContainer.style.display = 'block';
+            dateContainer.style.display = 'none'; // Hide date input
+        }
+        // Hide both if "Never" is selected
+        else {
+            dateContainer.style.display = 'none';
+            daysContainer.style.display = 'none';
+        }
+    }
+
+    function addTaskCategory() {
+        const taskCategoriesContainer = document.getElementById('taskCategoriesContainer');
+        const taskCount = taskCategoriesContainer.children.length;
+
+        // Limit the number of task categories to 10
+        if (taskCount < 10) {
+            const newTaskDiv = document.createElement('div');
+            newTaskDiv.classList.add('task-category');
+
+            newTaskDiv.innerHTML = `
+                <input type="text" name="task_category" placeholder="Task Category" maxlength="30" required oninput="removeCommas(this)">
+                <button type="button" class="delete-button" onclick="removeTaskCategory(this)">Delete</button>
+            `;
+            taskCategoriesContainer.appendChild(newTaskDiv);
+        } else {
+            alert('You can only add up to 10 task categories.');
+        }
+    }
+
+    function removeTaskCategory(button) {
+        // Remove the task category input and its associated delete button
+        const taskCategoryDiv = button.parentElement;
+        taskCategoryDiv.remove();
+    }
+
+    function removeCommas(input) {
+        // Remove commas from the input value
+        input.value = input.value.replace(/,/g, '');
+    }
+
+
+</script>
+
+{% endblock %}

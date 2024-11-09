@@ -1,0 +1,182 @@
+{% extends 'main/base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+Scheduler
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Center content and make layout consistent */
+    .content-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 800px;
+        width: 100%;
+    }
+
+    h1 {
+        font-weight: normal;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin: 5px; /* Add some space between buttons */
+    }
+
+    .button.view,
+    .button.edit {
+        background-color: #007bff; /* Blue color for view and edit */
+        color: white;
+    }
+
+    .button.view:hover,
+    .button.edit:hover {
+        background-color: #0056b3; /* Darker blue on hover */
+    }
+
+    .button.delete {
+        background-color: #dc3545; /* Red color for delete */
+        color: white;
+    }
+
+    .button.delete:hover {
+        background-color: #c82333; /* Darker red on hover */
+    }
+
+    .schedule-card {
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        width: 100%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center; /* Center text inside the card */
+    }
+
+    .schedule-card h4 {
+        margin: 0;
+        font-weight: normal;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: center; /* Center the buttons horizontally */
+        flex-wrap: wrap; /* Allow buttons to wrap if needed */
+        margin-top: 10px; /* Add space above the button container */
+    }
+
+    .section-title {
+        margin-top: 20px;
+        text-align: center;
+        font-weight: normal;
+        font-size: 2.5em;
+    }
+</style>
+
+<div class="content-wrapper">
+    <div class="form-container">
+        <h1>Schedule Manager</h1>
+        <button class="button" onclick="window.location.href='{% url 'create_scheduler' %}'">Create New Schedule</button>
+
+    <div class="section-title">Today's Schedules</div>
+    {% for item in today_schedules %}
+        <div class="schedule-card">
+            <h3>{{ item.name }}</h3>
+            <h4>{{ item.day_active|format_custom_date|safe }}</h4>
+            <div class="button-container">
+                <form action="{% url 'view_single_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button view">View</button>
+                </form>
+                <form action="{% url 'edit_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button edit">Edit Settings</button>
+                </form>
+                <form action="{% url 'delete_schedule' item.id %}" method="post" onsubmit="return confirmAction('Are you sure you want to delete this schedule?', this.submit);">
+                    {% csrf_token %}
+                    <button type="submit" class="button delete">Delete</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p>No schedules for today.</p>
+    {% endfor %}
+
+    <div class="section-title">Future Schedules</div>
+    {% for item in future_schedules %}
+        <div class="schedule-card">
+            <h3>{{ item.name }}</h3>
+            <h4>{{ item.day_active|format_custom_date|safe }}</h4>
+            <div class="button-container">
+                <form action="{% url 'view_single_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button view">View</button>
+                </form>
+                <form action="{% url 'edit_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button edit">Edit Settings</button>
+                </form>
+                <form action="{% url 'delete_schedule' item.id %}" method="post" onsubmit="return confirmAction('Are you sure you want to delete this schedule?', this.submit);">
+                    {% csrf_token %}
+                    <button type="submit" class="button delete">Delete</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p>No future schedules.</p>
+    {% endfor %}
+
+    <div class="section-title">Previous Schedules</div>
+    {% for item in past_schedules %}
+        <div class="schedule-card">
+            <h3>{{ item.name }}</h3>
+            <h4>{{ item.day_active|format_custom_date|safe }}</h4>
+            <div class="button-container">
+                <form action="{% url 'view_single_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button view">View</button>
+                </form>
+                <form action="{% url 'edit_schedule' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="button edit">Edit Settings</button>
+                </form>
+                <form action="{% url 'delete_schedule' item.id %}" method="post" onsubmit="return confirmAction('Are you sure you want to delete this schedule?', this.submit);">
+                    {% csrf_token %}
+                    <button type="submit" class="button delete">Delete</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p>No previous schedules.</p>
+    {% endfor %}
+    </div>
+</div>
+
+<script>
+    function confirmAction(message, action) {
+        if (confirm(message)) {
+            action(); // Execute the action if confirmed
+            return true; // Ensure form submission proceeds
+        }
+        return false; // Prevent form submission if not confirmed
+    }
+</script>
+
+{% endblock %}

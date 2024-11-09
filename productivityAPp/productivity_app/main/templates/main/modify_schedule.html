@@ -1,0 +1,208 @@
+{% extends 'main/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; align-items: center;">
+    <h1>Modify {{schedule.name}}</h1>
+
+    <!-- Buttons -->
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+        <button type="button" onclick="addNewItem()">Add New Item</button>
+        <form action="{% url 'modify_schedule' schedule.id %}" method="post" onsubmit="return submitItems()">
+            {% csrf_token %}
+            <input type="hidden" name="item_count" id="itemCountInput" value="0">
+            <input type="hidden" id="categoriesInput" name="categories">
+            <input type="hidden" id="namesInput" name="names">
+            <input type="hidden" id="startTimesInput" name="start_times">
+            <input type="hidden" id="endTimesInput" name="end_times">
+            <button type="submit" class="button">Submit</button>
+        </form>
+    </div>
+
+    <!-- Items Form -->
+    <form id="itemsForm" style="width: 80%; display: flex; flex-direction: column; gap: 15px;">
+        {% for item in schedule.schedule_items.all %}
+            <div class="item" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <select name="category_{{ forloop.counter }}" style="flex: 1;">
+                    <option value="{{ item.category }}" selected>{{ item.category }}</option>
+                    {% for category in schedule.task_category|split_string %}
+                        {% if category != item.category %}
+                            {% if category == "" %}
+                                {% if item.category != "No Category" %}
+                                    <option>No Category</option>
+                                {% endif %}
+                            {% else %}
+                                <option>{{category}}</option>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <input type="text" name="name_{{ forloop.counter }}" placeholder="Name" value="{{ item.name }}" style="flex: 1;">
+                <input type="time" name="start_time_{{ forloop.counter }}" value="{{ item.start_time|time:'H:i' }}" style="flex: 1;">
+                <input type="time" name="end_time_{{ forloop.counter }}" value="{{ item.end_time|time:'H:i' }}" style="flex: 1;">
+                <button type="button" style="background-color: red; color: white; border: none; border-radius: 5px; padding: 3px 5px; font-size: 12px; cursor: pointer;" onclick="removeItem(this)">Delete</button>
+            </div>
+        {% endfor %}
+    </form>
+</div>
+
+<script>
+    let itemCount = {{ schedule.schedule_items.count }};
+
+    function addNewItem() {
+        itemCount++;
+        document.getElementById('itemCountInput').value = itemCount;
+
+        // Create a container for the new item
+        const itemContainer = document.createElement('div');
+        itemContainer.className = 'item';
+        itemContainer.style = "display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px;";
+
+        // Category dropdown
+        const categorySelect = document.createElement('select');
+        categorySelect.name = `category_${itemCount}`;
+        categorySelect.style = "flex: 1;"; // Allow it to grow and fill available space
+
+        // Add options to the dropdown
+        const category = "{{ schedule.task_category }}";
+        const category_array = category.split(",").slice(0, -1);
+        category_array.push("No Category");
+        category_array.forEach(category => {
+            const opt = document.createElement('option');
+            opt.value = category;
+            opt.textContent = category;
+            categorySelect.appendChild(opt);
+        });
+
+        // Name input
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.name = `name_${itemCount}`;
+        nameInput.placeholder = 'Name';
+        nameInput.style = "flex: 1;"; // Allow it to grow and fill available space
+
+        // Prevent commas from being entered
+        nameInput.addEventListener('input', function() {
+            this.value = this.value.replace(/,/g, ''); // Remove commas
+        });
+
+        // Start time input
+        const startTimeInput = document.createElement('input');
+        startTimeInput.type = 'time';
+        startTimeInput.name = `start_time_${itemCount}`;
+        startTimeInput.style = "flex: 1;"; // Allow it to grow and fill available space
+
+        // End time input
+        const endTimeInput = document.createElement('input');
+        endTimeInput.type = 'time';
+        endTimeInput.name = `end_time_${itemCount}`;
+        endTimeInput.style = "flex: 1;"; // Allow it to grow and fill available space
+
+        // Delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete'; // Set text to "Delete"
+        deleteButton.style = "background-color: red; color: white; border: none; border-radius: 5px; padding: 3px 5px; font-size: 12px; cursor: pointer;"; // Smaller button styles
+        deleteButton.onclick = function() {
+            itemCount--;
+            document.getElementById('itemCountInput').value = itemCount;
+            itemContainer.remove(); // Remove the item container
+        };
+
+        // Append inputs and delete button to item container
+        itemContainer.appendChild(categorySelect);
+        itemContainer.appendChild(nameInput);
+        itemContainer.appendChild(startTimeInput);
+        itemContainer.appendChild(endTimeInput);
+        itemContainer.appendChild(deleteButton); // Append the delete button
+
+        // Append item container to the form
+        document.getElementById('itemsForm').appendChild(itemContainer);
+    }
+
+    function removeItem(button) {
+        const itemContainer = button.closest('.item');
+        itemContainer.remove();
+        itemCount--;
+        document.getElementById('itemCountInput').value = itemCount;
+    }
+
+    function validateTimes() {
+        const items = document.querySelectorAll('.item');
+
+       if (itemCount === 0) {
+            return `You must enter at least one task`;
+        }
+
+        for (let index = 0; index < items.length; index++) {
+            const category = items[index].querySelector(`select[name='category_${index + 1}']`).value;
+            const name = items[index].querySelector(`input[name='name_${index + 1}']`).value;
+            const startTime = items[index].querySelector(`input[name='start_time_${index + 1}']`).value;
+            const endTime = items[index].querySelector(`input[name='end_time_${index + 1}']`).value;
+
+            // Check for missing fields
+            if (!category || !name || !startTime || !endTime) {
+                return `Event ${index + 1}: All fields must be filled out.`;
+            }
+
+            const startDateTime = new Date(`1970-01-01T${startTime}:00`);
+            const endDateTime = new Date(`1970-01-01T${endTime}:00`);
+            const timeDiff = (endDateTime - startDateTime) / 60000; // in minutes
+
+            // Check if the time difference is less than 15 minutes or negative
+            if (timeDiff < 15) {
+                return `Event ${index + 1}: End time must be at least 15 minutes after start time.`;
+            }
+
+            // Check chronological order
+            if (index > 0) {
+                const previousEndTime = new Date(`1970-01-01T${items[index - 1].querySelector(`input[name='end_time_${index}']`).value}:00`);
+                if (startDateTime < previousEndTime) {
+                    return `Event ${index + 1}: Start time must be after the previous event's end time.`;
+                }
+            }
+        }
+
+        return null; // No errors found
+    }
+
+    function submitItems() {
+        const categoryInputs = document.querySelectorAll('select[name^="category_"]');
+        const nameInputs = document.querySelectorAll('input[name^="name_"]');
+        const startTimeInputs = document.querySelectorAll('input[name^="start_time_"]');
+        const endTimeInputs = document.querySelectorAll('input[name^="end_time_"]');
+
+        // Concatenate values for each type
+        const categories = Array.from(categoryInputs).map(input => input.value).join(",");
+        const names = Array.from(nameInputs).map(input => input.value).join(",");
+        const startTimes = Array.from(startTimeInputs).map(input => input.value).join(",");
+        const endTimes = Array.from(endTimeInputs).map(input => input.value).join(",");
+
+        // Store concatenated values in hidden fields
+        document.getElementById("categoriesInput").value = categories;
+        document.getElementById("namesInput").value = names;
+        document.getElementById("startTimesInput").value = startTimes;
+        document.getElementById("endTimesInput").value = endTimes;
+
+        // Validate the times and check for errors
+        const error = validateTimes();
+        if (error) {
+            alert(error); // Show the first error message
+            return false; // Prevent form submission if there's an error
+        }
+
+        return true; // Allow form submission if there are no errors
+    }
+
+    function confirmAction(message, action) {
+        if (confirm(message)) {
+            action(); // Execute the action if confirmed
+            return true; // Ensure form submission proceeds
+        }
+        return false; // Prevent form submission if not confirmed
+    }
+
+</script>
+
+{% endblock %}
+
